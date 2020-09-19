@@ -25,39 +25,68 @@ func (s *SmallBen) AddUserEvaluationRules(rules []UserEvaluationRule) error {
 }
 
 func (s *SmallBen) DeleteUserEvaluationRule(rulesID []int) error {
-	// first, we grab the rule from the database
-	rules := make([]UserEvaluationRule, len(rulesID))
 
-	for i, ruleID := range rulesID {
-		uer, err := s.repository.GetUserEvaluationRule(ruleID)
-		if err != nil {
-			return err
-		}
-		rules[i] = uer
+	rules, err := s.getUserEvaluationRulesFromIds(rulesID)
+	if err != nil {
+		return err
 	}
 
 	s.scheduler.DeleteUserEvaluationRules(rules)
 	return nil
 }
 
-//func (s *SmallBen) AddUserEvaluationRule(userEvaluationRule *UserEvaluationRule) error {
-//	// first, we need to add the job to the scheduler, in order
-//	// to get back the id
-//
-//	inputs := userEvaluationRule.toRunFunctionInput()
-//
-//	for i, runFunctionInput := range inputs {
-//		entryId, err := s.cron.AddFunc(getCronSchedule(userEvaluationRule.Tests[i].Seconds), func() {
-//			runFunction(runFunctionInput)
-//		})
-//		if err != nil {
-//			return err
-//		}
-//		// set the entryId to the test object
-//		// need to convert since it is an opaque type
-//		userEvaluationRule.Tests[i].CronId = int(entryId)
-//	}
-//
-//	// now, we can add the entries to the database.
-//	return nil
-//}
+// Returns a list of UserEvaluationRule whose id is in `rulesID`. The list of UserEvaluationRule id
+// must be complete and not in excess.
+func (s *SmallBen) getUserEvaluationRulesFromIds(rulesID []int) ([]UserEvaluationRule, error) {
+	rules := make([]UserEvaluationRule, len(rulesID))
+	for i, ruleID := range rulesID {
+		uer, err := s.repository.GetUserEvaluationRule(ruleID)
+		if err != nil {
+			return nil, err
+		}
+		rules[i] = uer
+	}
+	return rules, nil
+}
+
+// Pause the UserEvaluationRule whose id is in `rulesID`.
+func (s *SmallBen) PauseUserEvaluationRules(rulesID []int) error {
+	// first, grab the list of UserEvaluationRule to pause
+	rules, err := s.getUserEvaluationRulesFromIds(rulesID)
+	if err != nil {
+		return err
+	}
+
+	// let's set them to pause in the database first
+	if err := s.repository.PauseUserEvaluationRules(rules); err != nil {
+		return err
+	}
+
+	// pause them from the scheduler means just to remove them
+	s.scheduler.DeleteUserEvaluationRules(rules)
+	return nil
+}
+
+func (s *SmallBen) ResumeUserEvaluationRules(rulesID []int) error {
+	// first, grab the list of UserEvaluationRule to pause
+	rules, err := s.getUserEvaluationRulesFromIds(rulesID)
+	if err != nil {
+		return err
+	}
+
+	// add them to the scheduler, in order to get back the id
+	updatedRules, err := s.scheduler.AddUserEvaluationRule(rules)
+	if err != nil {
+		return err
+	}
+
+	// now, add them to the database
+	err = s.repository.ResumeUserEvaluationRule(updatedRules, true)
+	if err != nil {
+		// if there errors, then re-remove from the scheduler in order
+		// to keep the state in sync
+		s.scheduler.DeleteUserEvaluationRules(rules)
+		return err
+	}
+	return nil
+}
