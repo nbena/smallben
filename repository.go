@@ -98,12 +98,13 @@ func (r *Repository) DeleteUserEvaluationRules(rulesID []int) error {
 func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule, error) {
 	var rules []UserEvaluationRule
 
-	// var tests []Test
-	// subQuery := r.db.Debug().Where("Tests", "paused = ?", false).Select("id").Find(&tests)
+	// corresponds to select * from user_evaluation_rules join test where uer.id
+	// in (select id from user_evaluation_rules where id in (select user_evaluation_rule_id from tests
+	// where paused = false))
+	result := r.db.Debug().Preload("Tests").Where("id in (?)",
+		r.db.Table("user_evaluation_rules").Select("id").Where("id in (?)",
+			r.db.Table("tests").Select("user_evaluation_rule_id").Where("paused = false"))).Find(&rules).Error
 
-	result := r.db.Debug().Preload("Tests", "paused = ?", false).Find(&rules).Error
-	// result := r.db.Debug().Table("Tests").Where("paused = ?").Joins("left join on user_evaluation_rule_id = user_evaluation_rules.id").Find(&rules).Error
-	// result := r.db.Debug().Preload("Tests").Where("id in (?)", subQuery).Find(&rules).Error
 	return rules, result
 }
 

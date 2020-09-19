@@ -1,7 +1,6 @@
 package smallben
 
 import (
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"testing"
@@ -29,13 +28,13 @@ var _ = Describe("Repository", func() {
 				UserId: 1,
 				Tests: []Test{
 					{
-						Id:                   1,
+						Id:                   2,
 						EverySecond:          60,
 						UserId:               1,
 						UserEvaluationRuleId: 1,
 						Paused:               false,
 					}, {
-						Id:                   2,
+						Id:                   3,
 						EverySecond:          120,
 						UserId:               1,
 						UserEvaluationRuleId: 1,
@@ -105,8 +104,6 @@ var _ = Describe("Repository", func() {
 
 			// we set them to paused
 			// without need to modify the models
-			fmt.Printf("=============\n")
-
 			err := repository.PauseUserEvaluationRules(availableUserEvaluationRules)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -115,17 +112,15 @@ var _ = Describe("Repository", func() {
 			rules, err := repository.GetAllUserEvaluationRulesToExecute()
 			Expect(err).ShouldNot(HaveOccurred())
 
-			fmt.Printf("%v\n", rules[0].Tests)
-
-			Expect(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules)).ToNot(ContainElements(getIdsFromUserEvaluationRuleList(rules)))
+			Expect(getIdsFromUserEvaluationRuleList(rules)).ToNot(ContainElements(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules)))
 		})
 
-		//AfterEach(func() {
-		//	// and we delete them to be sure we leave room for
-		//	// other operations
-		//	err := repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules))
-		//	Expect(err).ShouldNot(HaveOccurred())
-		//})
+		AfterEach(func() {
+			// and we delete them to be sure we leave room for
+			// other operations
+			err := repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules))
+			Expect(err).ShouldNot(HaveOccurred())
+		})
 	})
 
 })
