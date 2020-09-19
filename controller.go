@@ -17,6 +17,30 @@ func (s *SmallBen) NewSmallBen(dbOptions *RepositoryOptions) (SmallBen, error) {
 	}, nil
 }
 
+// Retrieve all the UserEvaluationRule to execute from the database
+// and then fills them into the scheduler.
+// In case of errors, it is guaranteed that the scheduler and the database
+// state won't change.
+func (s *SmallBen) Fill() error {
+	// get all the rules
+	rules, err := s.repository.GetAllUserEvaluationRulesToExecute()
+	if err != nil {
+		return err
+	}
+	// now, add them to the scheduler
+	modifiedRules, err := s.scheduler.AddUserEvaluationRule(rules)
+	if err != nil {
+		return err
+	}
+	// now, update the db by updating the cron entries
+	err = s.repository.SetCronIdOf(modifiedRules)
+	if err != nil {
+		// if there is an error, remove them from the scheduler
+		s.scheduler.DeleteUserEvaluationRules(modifiedRules)
+	}
+	return nil
+}
+
 func (s *SmallBen) AddUserEvaluationRules(rules []UserEvaluationRule) error {
 
 	// add them to the scheduler

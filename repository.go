@@ -106,6 +106,26 @@ func (r *Repository) DeleteUserEvaluationRules(rulesID []int) error {
 	return nil
 }
 
+// Returns all the UserEvaluationRule to execute (i.e., `.test.paused = false`).
+func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule, error) {
+	var rules []UserEvaluationRule
+	result := r.db.Where("paused=?", false).Preload("tests").Find(&rules)
+	return rules, result.Error
+}
+
+// Saves the Test of `rules`.
+func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
+	// flattening all the tests
+	var tests []Test
+	for _, rule := range rules {
+		for _, test := range rule.Tests {
+			tests = append(tests, test)
+		}
+	}
+	// and then perform a single update
+	return r.db.Save(tests).Error
+}
+
 func getIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {
 	ids := make([]int, len(rules))
 	for i, rule := range rules {
