@@ -39,27 +39,19 @@ func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error 
 	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": true}).Error
 }
 
-// Resume `rule`. This function just performs an update, it is responsible of the call
-// to set the tests as not paused.
-// if `setUnpaused` is `true`, then the db automatically set the tests to `paused=false`.
-func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule, setUnpaused bool) error {
-	//return r.db.Model(rule.Tests[0]).Where(
-	//	"user_evaluation_rule_id = ?", rule.Id).Updates(rule.Tests).Error
-	//err := r.db.Transaction(func(tx *gorm.DB) error {
-	//	for _, rule := range rules {
-	//		query := r.db.Model(Test{}).Where("UserEvaluationRuleId in ?", rule.Id).Updates(rule.Tests)
-	//		if setUnpaused {
-	//			query = query.Updates(map[string]interface{}{"paused": false})
-	//		}
-	//		if err := query.Error; err != nil {
-	//			return err
-	//		}
-	//	}
-	//	return nil
-	//})
-	//return err
-	ids := getIdsFromUserEvaluationRuleList(rules)
-	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": false}).Error
+// Resume `rule`. This function updates the whole Test of `rules`, *and* set `paused=false`.
+func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule) error {
+	tests := flatTests(rules)
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		for _, test := range tests {
+			err := r.db.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }
 
 func (r *Repository) deleteUserEvaluationRule(rule *UserEvaluationRule) error {
@@ -113,14 +105,18 @@ func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule,
 // Saves the Test of `rules`.
 func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
 	// flattening all the tests
-	var tests []Test
-	for _, rule := range rules {
-		for _, test := range rule.Tests {
-			tests = append(tests, test)
+	tests := flatTests(rules)
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		for _, test := range tests {
+			err := r.db.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
+			if err != nil {
+				return err
+			}
 		}
-	}
+		return nil
+	})
 	// and then perform a single update
-	return r.db.Save(tests).Error
+	return err
 }
 
 func getIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {

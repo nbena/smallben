@@ -32,3 +32,12 @@ func (u *UserEvaluationRule) toRunFunctionInput() []runFunctionInput {
 	}
 	return inputs
 }
+
+// Returns a flattened list of Test contained in `rules`.
+func flatTests(rules []UserEvaluationRule) []Test {
+	var tests []Test
+	for _, rule := range rules {
+		tests = append(tests, rule.Tests...)
+	}
+	return tests
+}

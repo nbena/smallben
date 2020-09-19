@@ -141,7 +141,7 @@ func (s *SmallBen) ResumeUserEvaluationRules(rulesID []int) error {
 	}
 
 	// now, add them to the database
-	err = s.repository.ResumeUserEvaluationRule(updatedRules, true)
+	err = s.repository.ResumeUserEvaluationRule(updatedRules)
 	if err != nil {
 		// if there errors, then re-remove from the scheduler in order
 		// to keep the state in sync

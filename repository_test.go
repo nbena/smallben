@@ -1,6 +1,7 @@
 package smallben
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"testing"
@@ -120,7 +121,7 @@ var _ = Describe("Repository", func() {
 			err := repository.PauseUserEvaluationRules(availableUserEvaluationRules)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = repository.ResumeUserEvaluationRule(availableUserEvaluationRules, true)
+			err = repository.ResumeUserEvaluationRule(availableUserEvaluationRules)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// now we retrieve them
@@ -128,6 +129,60 @@ var _ = Describe("Repository", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(len(availableUserEvaluationRules)).To(Equal(len(rules)))
+		})
+
+		AfterEach(func() {
+			// and we delete them to be sure we leave room for
+			// other operations
+			err := repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules))
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("when setting the cron id of tests", func() {
+
+		var testsBefore []Test
+
+		BeforeEach(func() {
+			// add the UserEvaluationRule
+			err := repository.AddUserEvaluationRule(availableUserEvaluationRules)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			counter := 10
+			for _, rule := range availableUserEvaluationRules {
+				for i := range rule.Tests {
+					rule.Tests[i].CronId = counter
+					counter += 1
+					testsBefore = append(testsBefore, rule.Tests[i])
+				}
+			}
+		})
+
+		It("works", func() {
+
+			err := repository.SetCronIdOf(availableUserEvaluationRules)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			rules, err := repository.GetAllUserEvaluationRulesToExecute()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			testsAfter := flatTests(rules)
+
+			flags := make([]bool, len(testsAfter))
+
+			for i, testBefore := range testsBefore {
+				for _, testsAfter := range testsAfter {
+					if testBefore.Id == testsAfter.Id {
+						Expect(testBefore.CronId).To(Equal(testsAfter.CronId))
+						flags[i] = true
+						break
+					}
+				}
+			}
+
+			for i, flag := range flags {
+				Expect(flag).To(Equal(true), fmt.Sprintf("Not flagged: %v\n", testsBefore[i]))
+			}
 		})
 
 		AfterEach(func() {
