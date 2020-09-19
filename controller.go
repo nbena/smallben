@@ -5,6 +5,7 @@ type SmallBen struct {
 	scheduler  Scheduler
 }
 
+// Creates a new instance of SmallBen.
 func (s *SmallBen) NewSmallBen(dbOptions *RepositoryOptions) (SmallBen, error) {
 	database, err := NewRepository(dbOptions)
 	if err != nil {
@@ -15,6 +16,22 @@ func (s *SmallBen) NewSmallBen(dbOptions *RepositoryOptions) (SmallBen, error) {
 		repository: database,
 		scheduler:  scheduler,
 	}, nil
+}
+
+// Start starts the SmallBen, by starting the inner scheduler and filling it
+// in with the needed UserEvaluationRule(s).
+func (s *SmallBen) Start() error {
+	s.scheduler.cron.Start()
+	// now, we fill in the scheduler
+	return s.Fill()
+}
+
+// Stop stops the SmallBen. This call will block until all *running* jobs
+// have finished.
+func (s *SmallBen) Stop() {
+	ctx := s.scheduler.cron.Stop()
+	// Wait on ctx.Done() till all jobs have finished, then left.
+	<-ctx.Done()
 }
 
 // Retrieve all the UserEvaluationRule to execute from the database
@@ -41,6 +58,8 @@ func (s *SmallBen) Fill() error {
 	return nil
 }
 
+// AddUserEvaluationRules add `rules`. It adds them to the scheduler and saves them to the db. If one
+// of those operations fail, it is guaranteed that the state does not change.
 func (s *SmallBen) AddUserEvaluationRules(rules []UserEvaluationRule) error {
 
 	// add them to the scheduler
@@ -60,7 +79,9 @@ func (s *SmallBen) AddUserEvaluationRules(rules []UserEvaluationRule) error {
 	return nil
 }
 
-func (s *SmallBen) DeleteUserEvaluationRule(rulesID []int) error {
+// DeleteUserEvaluationRules deletes the UserEvaluationRule whose ids are in rulesID.
+// This function returns an error if some of the requested rulesID are within the database.
+func (s *SmallBen) DeleteUserEvaluationRules(rulesID []int) error {
 
 	rules, err := s.getUserEvaluationRulesFromIds(rulesID)
 	if err != nil {
@@ -85,7 +106,8 @@ func (s *SmallBen) getUserEvaluationRulesFromIds(rulesID []int) ([]UserEvaluatio
 	return rules, nil
 }
 
-// Pause the UserEvaluationRule whose id is in `rulesID`.
+//  PauseUserEvaluationRules pauses the UserEvaluationRule whose ids are in `rulesID`.
+// The array must be not in excess, otherwise errors will be returned.
 func (s *SmallBen) PauseUserEvaluationRules(rulesID []int) error {
 	// first, grab the list of UserEvaluationRule to pause
 	rules, err := s.getUserEvaluationRulesFromIds(rulesID)
@@ -103,6 +125,8 @@ func (s *SmallBen) PauseUserEvaluationRules(rulesID []int) error {
 	return nil
 }
 
+// ResumeUserEvaluationRules resumes the UserEvaluationRule whose id are in rulesID.
+// The array must be not in excess, otherwise errors will be returned.
 func (s *SmallBen) ResumeUserEvaluationRules(rulesID []int) error {
 	// first, grab the list of UserEvaluationRule to pause
 	rules, err := s.getUserEvaluationRulesFromIds(rulesID)

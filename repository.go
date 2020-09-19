@@ -11,14 +11,14 @@ type Repository struct {
 }
 
 type RepositoryOptions struct {
-	host     string
-	port     int
-	user     string
-	password string
+	Host     string
+	Port     int
+	User     string
+	Password string
 }
 
 func (o *RepositoryOptions) String() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s", o.host, o.port, o.user, o.password)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s", o.Host, o.Port, o.User, o.Password)
 }
 
 func NewRepository(connectionOptions *RepositoryOptions) (Repository, error) {
