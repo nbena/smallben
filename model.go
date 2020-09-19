@@ -10,7 +10,7 @@ type Test struct {
 	Paused               bool `gorm:"default:false"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	UserEvaluationRuleId uint
+	UserEvaluationRuleId uint `gorm:"column:user_evaluation_rule_id"`
 }
 
 type UserEvaluationRule struct {

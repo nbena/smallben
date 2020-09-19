@@ -36,7 +36,7 @@ func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error 
 	//return r.db.Model(rule.Tests[0]).Where(
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(map[string]interface{}{"paused": true, "CronId": 0}).Error
 	ids := getIdsFromUserEvaluationRuleList(rules)
-	return r.db.Table("tests").Where("UserEvaluationRuleId in ?", ids).Updates(map[string]bool{"paused": true}).Error
+	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": true}).Error
 }
 
 // Resume `rule`. This function just performs an update, it is responsible of the call
@@ -97,7 +97,13 @@ func (r *Repository) DeleteUserEvaluationRules(rulesID []int) error {
 // Returns all the UserEvaluationRule to execute (i.e., `.test.paused = false`).
 func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule, error) {
 	var rules []UserEvaluationRule
-	result := r.db.Preload("Tests", "paused = ?", false).Find(&rules).Error
+
+	// var tests []Test
+	// subQuery := r.db.Debug().Where("Tests", "paused = ?", false).Select("id").Find(&tests)
+
+	result := r.db.Debug().Preload("Tests", "paused = ?", false).Find(&rules).Error
+	// result := r.db.Debug().Table("Tests").Where("paused = ?").Joins("left join on user_evaluation_rule_id = user_evaluation_rules.id").Find(&rules).Error
+	// result := r.db.Debug().Preload("Tests").Where("id in (?)", subQuery).Find(&rules).Error
 	return rules, result
 }
 
