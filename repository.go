@@ -45,19 +45,21 @@ func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error 
 func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule, setUnpaused bool) error {
 	//return r.db.Model(rule.Tests[0]).Where(
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(rule.Tests).Error
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		for _, rule := range rules {
-			query := r.db.Model(Test{}).Where("UserEvaluationRuleId in ?").Updates(rule.Tests)
-			if setUnpaused {
-				query = query.Updates(map[string]bool{"paused": false})
-			}
-			if err := query.Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
+	//err := r.db.Transaction(func(tx *gorm.DB) error {
+	//	for _, rule := range rules {
+	//		query := r.db.Model(Test{}).Where("UserEvaluationRuleId in ?", rule.Id).Updates(rule.Tests)
+	//		if setUnpaused {
+	//			query = query.Updates(map[string]interface{}{"paused": false})
+	//		}
+	//		if err := query.Error; err != nil {
+	//			return err
+	//		}
+	//	}
+	//	return nil
+	//})
+	//return err
+	ids := getIdsFromUserEvaluationRuleList(rules)
+	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": false}).Error
 }
 
 func (r *Repository) deleteUserEvaluationRule(rule *UserEvaluationRule) error {

@@ -108,11 +108,26 @@ var _ = Describe("Repository", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// now we retrieve them
-
 			rules, err := repository.GetAllUserEvaluationRulesToExecute()
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(getIdsFromUserEvaluationRuleList(rules)).ToNot(ContainElements(getIdsFromUserEvaluationRuleList(availableUserEvaluationRules)))
+		})
+
+		It("correctly resume those user evaluation rules", func() {
+
+			// re-pause them
+			err := repository.PauseUserEvaluationRules(availableUserEvaluationRules)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = repository.ResumeUserEvaluationRule(availableUserEvaluationRules, true)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// now we retrieve them
+			rules, err := repository.GetAllUserEvaluationRulesToExecute()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(len(availableUserEvaluationRules)).To(Equal(len(rules)))
 		})
 
 		AfterEach(func() {
