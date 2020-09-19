@@ -3,10 +3,11 @@ package smallben
 import "time"
 
 type Test struct {
-	Id                   int  `gorm:"primaryKey"`
-	CronId               int  `gorm:"uniqueIndex"`
-	Seconds              int  `gorm:"check:seconds > 60"`
-	Paused               bool `gorm:"default:true"`
+	Id                   int `gorm:"primaryKey"`
+	UserId               int
+	CronId               int  `gorm:"default:0"`
+	EverySecond          int  `gorm:"check:seconds >= 60"`
+	Paused               bool `gorm:"default:false"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	UserEvaluationRuleId uint

@@ -41,7 +41,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 		for j, input := range inputs {
 			var entryID cron.EntryID
 			// add the entry to the scheduler
-			entryID, err = s.cron.AddFunc(getCronSchedule(rule.Tests[j].Seconds), func() {
+			entryID, err = s.cron.AddFunc(getCronSchedule(rule.Tests[j].EverySecond), func() {
 				runFunction(input)
 			})
 			// we can return without worrying about spurious element

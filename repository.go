@@ -1,24 +1,12 @@
 package smallben
 
 import (
-	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 type Repository struct {
 	db *gorm.DB
-}
-
-type RepositoryOptions struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-}
-
-func (o *RepositoryOptions) String() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s", o.Host, o.Port, o.User, o.Password)
 }
 
 func NewRepository(connectionOptions *RepositoryOptions) (Repository, error) {
@@ -48,7 +36,7 @@ func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error 
 	//return r.db.Model(rule.Tests[0]).Where(
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(map[string]interface{}{"paused": true, "CronId": 0}).Error
 	ids := getIdsFromUserEvaluationRuleList(rules)
-	return r.db.Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]bool{"paused": true}).Error
+	return r.db.Table("tests").Where("UserEvaluationRuleId in ?", ids).Updates(map[string]bool{"paused": true}).Error
 }
 
 // Resume `rule`. This function just performs an update, it is responsible of the call
@@ -59,7 +47,7 @@ func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule, setUnp
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(rule.Tests).Error
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, rule := range rules {
-			query := r.db.Model(Test{}).Where("user_evaluation_rule_id in ?").Updates(rule.Tests)
+			query := r.db.Model(Test{}).Where("UserEvaluationRuleId in ?").Updates(rule.Tests)
 			if setUnpaused {
 				query = query.Updates(map[string]bool{"paused": false})
 			}
@@ -109,8 +97,8 @@ func (r *Repository) DeleteUserEvaluationRules(rulesID []int) error {
 // Returns all the UserEvaluationRule to execute (i.e., `.test.paused = false`).
 func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule, error) {
 	var rules []UserEvaluationRule
-	result := r.db.Where("paused=?", false).Preload("tests").Find(&rules)
-	return rules, result.Error
+	result := r.db.Preload("Tests", "paused = ?", false).Find(&rules).Error
+	return rules, result
 }
 
 // Saves the Test of `rules`.
