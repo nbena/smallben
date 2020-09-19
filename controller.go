@@ -5,6 +5,18 @@ type SmallBen struct {
 	scheduler  Scheduler
 }
 
+func (s *SmallBen) NewSmallBen(dbOptions *RepositoryOptions) (SmallBen, error) {
+	database, err := NewRepository(dbOptions)
+	if err != nil {
+		return SmallBen{}, nil
+	}
+	scheduler := NewScheduler()
+	return SmallBen{
+		repository: database,
+		scheduler:  scheduler,
+	}, nil
+}
+
 func (s *SmallBen) AddUserEvaluationRules(rules []UserEvaluationRule) error {
 
 	// add them to the scheduler

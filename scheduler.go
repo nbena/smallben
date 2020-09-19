@@ -6,7 +6,14 @@ import (
 )
 
 type Scheduler struct {
-	cron cron.Cron
+	cron *cron.Cron
+}
+
+// Returns a new Scheduler.
+func NewScheduler() Scheduler {
+	return Scheduler{
+		cron: cron.New(cron.WithSeconds()),
+	}
 }
 
 func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {

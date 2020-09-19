@@ -1,9 +1,32 @@
 package smallben
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
 
 type Repository struct {
 	db *gorm.DB
+}
+
+type RepositoryOptions struct {
+	host     string
+	port     int
+	user     string
+	password string
+}
+
+func (o *RepositoryOptions) String() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s", o.host, o.port, o.user, o.password)
+}
+
+func NewRepository(connectionOptions *RepositoryOptions) (Repository, error) {
+	db, err := gorm.Open(postgres.Open(connectionOptions.String()), &gorm.Config{})
+	if err != nil {
+		return Repository{}, err
+	}
+	return Repository{db: db}, nil
 }
 
 // Create a new UserEvaluationRule storing it within the database.
@@ -36,11 +59,13 @@ func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule, setUnp
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(rule.Tests).Error
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, rule := range rules {
-			if err := r.db.Model(Test{}).Where("user_evaluation_rule_id in ?").Updates(
-				rule.Tests).Updates(map[string]bool{"paused": false}).Error; err != nil {
+			query := r.db.Model(Test{}).Where("user_evaluation_rule_id in ?").Updates(rule.Tests)
+			if setUnpaused {
+				query = query.Updates(map[string]bool{"paused": false})
+			}
+			if err := query.Error; err != nil {
 				return err
 			}
-
 		}
 		return nil
 	})
