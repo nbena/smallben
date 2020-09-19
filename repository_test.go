@@ -62,6 +62,18 @@ var _ = Describe("Repository", func() {
 
 		})
 
+		Context("retrieves it", func() {
+			BeforeEach(func() {
+				err := repository.AddUserEvaluationRule(availableUserEvaluationRules)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("without errors", func() {
+				_, err := repository.GetUserEvaluationRule(availableUserEvaluationRules[0].Id)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+
 		AfterEach(func() {
 			// and we delete them to be sure we leave room for
 			// other operations
