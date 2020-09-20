@@ -1,7 +1,9 @@
 package smallben
 
 import (
+	"errors"
 	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 	"testing"
 )
 
@@ -35,24 +37,37 @@ type RepositoryOtherTestSuite struct {
 	suite.Suite
 	repository                   Repository
 	availableUserEvaluationRules []UserEvaluationRule
+	okDeleteError                bool
 }
 
 func (r *RepositoryOtherTestSuite) SetupTest() {
 	repository, rules := setup(r.Suite)
 	r.repository = repository
 	r.availableUserEvaluationRules = rules
+	r.okDeleteError = false
 	// also add them
 	err := r.repository.AddUserEvaluationRule(r.availableUserEvaluationRules)
 	r.Nil(err, "Cannot add rules on setup")
 }
 
 func (r *RepositoryOtherTestSuite) TearDownTest() {
-	teardown(r.Suite, &r.repository, r.availableUserEvaluationRules)
+	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
+	if r.okDeleteError {
+		r.Suite.True(errors.Is(err, gorm.ErrRecordNotFound))
+	} else {
+		r.Nil(err)
+	}
 }
 
 func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
 	_, err := r.repository.GetUserEvaluationRule(r.availableUserEvaluationRules[0].Id)
 	r.Nil(err, "Cannot retrieve single rule")
+}
+
+func (r *RepositoryOtherTestSuite) TestDelete() {
+	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
+	r.Nil(err, "Cannot delete rules")
+	r.okDeleteError = true
 }
 
 func TestRepositoryTestSuite(t *testing.T) {
