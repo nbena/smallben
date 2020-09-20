@@ -52,7 +52,7 @@ func (r *RepositoryOtherTestSuite) SetupTest() {
 }
 
 func (r *RepositoryOtherTestSuite) TearDownTest() {
-	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
+	err := r.repository.DeleteUserEvaluationRules(GetIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
 	if r.okDeleteError {
 		r.Suite.True(errors.Is(err, gorm.ErrRecordNotFound))
 	} else {
@@ -66,7 +66,7 @@ func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
 }
 
 func (r *RepositoryOtherTestSuite) TestDelete() {
-	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
+	err := r.repository.DeleteUserEvaluationRules(GetIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
 	r.Nil(err, "Cannot delete rules")
 	r.okDeleteError = true
 }
@@ -78,8 +78,8 @@ func (r *RepositoryOtherTestSuite) TestPause() {
 	// now we retrieve them
 	rules, err := r.repository.GetAllUserEvaluationRulesToExecute()
 	r.Nil(err, "Cannot retrieve rules")
-	r.NotContains(getIdsFromUserEvaluationRuleList(rules),
-		getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules), "Contains failed")
+	r.NotContains(GetIdsFromUserEvaluationRuleList(rules),
+		GetIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules), "Contains failed")
 }
 
 func (r *RepositoryOtherTestSuite) TestResume() {
@@ -140,7 +140,7 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 	rules, err := r.repository.GetAllUserEvaluationRulesToExecute()
 	r.Nil(err, "Cannot retrieve rules")
 
-	testsAfter := flatTests(rules)
+	testsAfter := FlatTests(rules)
 	flags := make([]bool, len(testsAfter))
 
 	for i, testBefore := range testsBefore {
@@ -167,7 +167,7 @@ func TestRepositoryOtherTestSuite(t *testing.T) {
 }
 
 func teardown(suite suite.Suite, repository *Repository, rules []UserEvaluationRule) {
-	err := repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(rules))
+	err := repository.DeleteUserEvaluationRules(GetIdsFromUserEvaluationRuleList(rules))
 	suite.Nil(err, "Cannot delete rules")
 }
 

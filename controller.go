@@ -1,5 +1,7 @@
 package smallben
 
+import "gorm.io/gorm"
+
 type SmallBen struct {
 	repository Repository
 	scheduler  Scheduler
@@ -149,4 +151,66 @@ func (s *SmallBen) ResumeUserEvaluationRules(rulesID []int) error {
 		return err
 	}
 	return nil
+}
+
+// UpdateSchedule updates the inner state according to `schedules`.
+// It is guaranteed that in case of any error, the database state won't be changed,
+// and that the tests in `schedules` are *removed*.
+func (s *SmallBen) UpdateSchedule(schedules []UpdateSchedule) error {
+
+	// first, retrieve the tests from the database
+	tests, err := s.repository.GetTests(GetIdsFromUpdateScheduleList(schedules))
+	if err != nil {
+		return err
+	}
+
+	// now, we build a list of tests from the schedules
+	for _, schedule := range schedules {
+		for _, test := range tests {
+			if test.Id == schedule.TestId {
+				test.EverySecond = schedule.EverySecond
+				break
+			}
+		}
+	}
+
+	// delete the tests from the scheduler in case of errors.
+	defer func() {
+		if err != nil {
+			s.scheduler.DeleteTests(tests)
+		}
+	}()
+
+	// now, we can update such tests in the database
+	// this, time, we need to open a transaction
+	// here.
+	err = s.repository.db.Transaction(func(tx *gorm.DB) error {
+
+		// first, remove the objects from the scheduler.
+		s.scheduler.DeleteTests(tests)
+
+		// next, we perform the update in the database.
+		for _, test := range tests {
+			err := tx.Model(&test).Updates(map[string]interface{}{"every_second": test.EverySecond}).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		// now insert them in the scheduler
+		modifiedTests, err := s.scheduler.AddTests(tests)
+		if err != nil {
+			return err
+		}
+
+		// now, update the cron id of such tests within the transaction
+		for _, test := range modifiedTests {
+			err = tx.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }

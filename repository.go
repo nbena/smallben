@@ -35,13 +35,13 @@ func (r *Repository) GetUserEvaluationRule(ruleID int) (UserEvaluationRule, erro
 func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error {
 	//return r.db.Model(rule.Tests[0]).Where(
 	//	"user_evaluation_rule_id = ?", rule.Id).Updates(map[string]interface{}{"paused": true, "CronId": 0}).Error
-	ids := getIdsFromUserEvaluationRuleList(rules)
+	ids := GetIdsFromUserEvaluationRuleList(rules)
 	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": true}).Error
 }
 
 // Resume `rule`. This function updates the whole Test of `rules`, *and* set `paused=false`.
 func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule) error {
-	tests := flatTests(rules)
+	tests := FlatTests(rules)
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, test := range tests {
 			err := r.db.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
@@ -102,10 +102,10 @@ func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule,
 	return rules, result
 }
 
-// Saves the Test of `rules`.
+// SetCronIdOf updates the cron id of `rules` in a transactional way.
 func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
 	// flattening all the tests
-	tests := flatTests(rules)
+	tests := FlatTests(rules)
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, test := range tests {
 			err := tx.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
@@ -118,7 +118,7 @@ func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
 	return err
 }
 
-// Update the schedule of `tests`. Updates are executed within a transaction.
+// ChangeSchedule update the schedule of `tests`. Updates are executed within a transaction.
 func (r *Repository) ChangeSchedule(tests []Test) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, test := range tests {
@@ -132,10 +132,16 @@ func (r *Repository) ChangeSchedule(tests []Test) error {
 	return err
 }
 
-func getIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {
-	ids := make([]int, len(rules))
-	for i, rule := range rules {
-		ids[i] = rule.Id
+// GetTests returns all the tests whose id are in `ids`.
+// Returns an error if one of such id has no correspondence.
+func (r *Repository) GetTests(ids []int) ([]Test, error) {
+	var tests []Test
+	err := r.db.Where("id in (?)", ids).Find(&tests).Error
+	if err != nil {
+		return tests, err
 	}
-	return ids
+	if len(tests) != len(ids) {
+		return tests, gorm.ErrRecordNotFound
+	}
+	return tests, nil
 }

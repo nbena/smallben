@@ -57,7 +57,7 @@ func (s *SchedulerTestSuite) TestAdd() {
 
 	// and they have all been added
 	entries := s.scheduler.cron.Entries()
-	s.Equal(len(entries), len(flatTests(modifiedRules)))
+	s.Equal(len(entries), len(FlatTests(modifiedRules)))
 }
 
 func (s *SchedulerTestSuite) TestDelete() {
@@ -69,7 +69,7 @@ func (s *SchedulerTestSuite) TestDelete() {
 	s.scheduler.DeleteUserEvaluationRules(modifiedRules)
 	lenAfter := len(s.scheduler.cron.Entries())
 
-	s.Equal(lenAfter+len(flatTests(s.availableUserEvaluationRules)), lenBefore, "len mismatch")
+	s.Equal(lenAfter+len(FlatTests(s.availableUserEvaluationRules)), lenBefore, "len mismatch")
 }
 
 func TestSchedulerSuite(t *testing.T) {

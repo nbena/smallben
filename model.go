@@ -13,6 +13,14 @@ type Test struct {
 	UserEvaluationRuleId uint `gorm:"column:user_evaluation_rule_id"`
 }
 
+func (t *Test) toRunFunctionInput() runFunctionInput {
+	return runFunctionInput{
+		testID:               t.Id,
+		userEvaluationRuleId: int(t.UserEvaluationRuleId),
+		userID:               t.UserId,
+	}
+}
+
 type UserEvaluationRule struct {
 	Id        int `gorm:"primaryKey"`
 	UserId    int
@@ -33,11 +41,48 @@ func (u *UserEvaluationRule) toRunFunctionInput() []runFunctionInput {
 	return inputs
 }
 
-// Returns a flattened list of Test contained in `rules`.
-func flatTests(rules []UserEvaluationRule) []Test {
+// FlatTests returns a flattened list of Test contained in `rules`, i.e.,
+// rules.map(rule -> rule.tests).flatten().
+func FlatTests(rules []UserEvaluationRule) []Test {
 	var tests []Test
 	for _, rule := range rules {
 		tests = append(tests, rule.Tests...)
 	}
 	return tests
+}
+
+// GetIdsFromUserEvaluationRuleList basically does rules.map(rule -> rule.id)
+func GetIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {
+	ids := make([]int, len(rules))
+	for i, rule := range rules {
+		ids[i] = rule.Id
+	}
+	return ids
+}
+
+// GetIdsFromTestList basically does tests.map(test -> test.id)
+func GetIdsFromTestList(tests []Test) []int {
+	ids := make([]int, len(tests))
+	for i, test := range tests {
+		ids[i] = test.Id
+	}
+	return ids
+}
+
+// UpdateSchedule is the struct used to update
+// the schedule of a test.
+type UpdateSchedule struct {
+	// TestId is the ID of the tests
+	TestId int
+	// EverySecond is the new schedule
+	EverySecond int
+}
+
+// GetIdsFromUpdateScheduleList basically does schedules.map(test -> test.id)
+func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int {
+	ids := make([]int, len(schedules))
+	for i, test := range schedules {
+		ids[i] = test.TestId
+	}
+	return ids
 }
