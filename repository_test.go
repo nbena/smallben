@@ -1,5 +1,63 @@
 package smallben
 
+import (
+	"github.com/stretchr/testify/suite"
+	"testing"
+)
+
+type RepositoryTestSuite struct {
+	suite.Suite
+	repository                   Repository
+	availableUserEvaluationRules []UserEvaluationRule
+}
+
+func (r *RepositoryTestSuite) SetupTest() {
+	var err error
+	repositoryOptions := NewRepositoryOptions()
+	r.repository, err = NewRepository(&repositoryOptions)
+	r.Nil(err, "Cannot connect to the database")
+	r.availableUserEvaluationRules = []UserEvaluationRule{
+		{
+			Id:     1,
+			UserId: 1,
+			Tests: []Test{
+				{
+					Id:                   2,
+					EverySecond:          60,
+					UserId:               1,
+					UserEvaluationRuleId: 1,
+					Paused:               false,
+				}, {
+					Id:                   3,
+					EverySecond:          120,
+					UserId:               1,
+					UserEvaluationRuleId: 1,
+					Paused:               false,
+				},
+			},
+		},
+	}
+}
+
+func (r *RepositoryTestSuite) TestAdd() {
+	err := r.repository.AddUserEvaluationRule(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot add rules")
+
+	// now performs a select making sure the adding is ok
+	result, err := r.repository.GetAllUserEvaluationRulesToExecute()
+	r.Nil(err, "Cannot get rules")
+	r.Equal(len(result), len(r.availableUserEvaluationRules), "Len mismatch")
+}
+
+func (r *RepositoryTestSuite) TearDownTest() {
+	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
+	r.Nil(err, "Cannot delete rules")
+}
+
+func TestRepositoryTestSuite(t *testing.T) {
+	suite.Run(t, new(RepositoryTestSuite))
+}
+
 //import (
 //	"fmt"
 //	. "github.com/onsi/ginkgo"

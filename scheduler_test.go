@@ -1,7 +1,6 @@
 package smallben
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -46,18 +45,18 @@ func (s *SchedulerTestSuite) TearDownTest() {
 
 func (s *SchedulerTestSuite) TestAdd() {
 	modifiedRules, err := s.scheduler.AddUserEvaluationRule(s.availableUserEvaluationRules)
-	assert.Nil(s.T(), err, "Error should not happen")
+	s.Nil(err, "Error should not happen")
 
 	// making sure all UserEvaluationRules have its own cron id
 	for _, rule := range modifiedRules {
 		for _, test := range rule.Tests {
-			assert.NotEqual(s.T(), test.CronId, -1)
+			s.NotEqual(test.CronId, -1)
 		}
 	}
 
 	// and they have all been added
 	entries := s.scheduler.cron.Entries()
-	assert.Equal(s.T(), len(entries), len(flatTests(modifiedRules)))
+	s.Equal(len(entries), len(flatTests(modifiedRules)))
 }
 
 func TestSchedulerSuite(t *testing.T) {
