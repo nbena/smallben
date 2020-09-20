@@ -70,6 +70,17 @@ func (r *RepositoryOtherTestSuite) TestDelete() {
 	r.okDeleteError = true
 }
 
+func (r *RepositoryOtherTestSuite) TestPause() {
+	err := r.repository.PauseUserEvaluationRules(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot pause rules")
+
+	// now we retrieve them
+	rules, err := r.repository.GetAllUserEvaluationRulesToExecute()
+	r.Nil(err, "Cannot retrieve rules")
+	r.NotContains(getIdsFromUserEvaluationRuleList(rules),
+		getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules), "Contains failed")
+}
+
 func TestRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(RepositoryAddTestSuite))
 }
