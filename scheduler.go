@@ -68,7 +68,7 @@ func (s *Scheduler) DeleteUserEvaluationRules(rules []UserEvaluationRule) {
 }
 
 func getCronSchedule(seconds int) string {
-	return fmt.Sprintf("@every %d", seconds)
+	return fmt.Sprintf("@every %ds", seconds)
 }
 
 type runFunctionInput struct {
