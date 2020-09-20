@@ -81,6 +81,19 @@ func (r *RepositoryOtherTestSuite) TestPause() {
 		getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules), "Contains failed")
 }
 
+func (r *RepositoryOtherTestSuite) TestResume() {
+	err := r.repository.PauseUserEvaluationRules(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot pause rules")
+
+	err = r.repository.ResumeUserEvaluationRule(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot resume rules")
+
+	rules, err := r.repository.GetAllUserEvaluationRulesToExecute()
+	r.Nil(err, "Cannot retrieve rules")
+
+	r.Equal(len(r.availableUserEvaluationRules), len(rules), "Len mismatch")
+}
+
 func TestRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(RepositoryAddTestSuite))
 }
