@@ -95,6 +95,34 @@ func (r *RepositoryOtherTestSuite) TestResume() {
 	r.Equal(len(r.availableUserEvaluationRules), len(rules), "Len mismatch")
 }
 
+func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
+	// grab a test to update
+	test := r.availableUserEvaluationRules[0].Tests[0]
+	test.EverySecond += 50
+
+	// create the array of tests
+	tests := []Test{test}
+	err := r.repository.ChangeSchedule(tests)
+	r.Nil(err, "Cannot change schedule")
+
+	rule, err := r.repository.GetUserEvaluationRule(r.availableUserEvaluationRules[0].Id)
+	r.Nil(err, "Cannot retrieve rule")
+
+	// now make sure the schedule has changed
+	found := false
+	var foundTest Test
+	for _, newTest := range rule.Tests {
+		if newTest.Id == test.Id {
+			foundTest = newTest
+			found = true
+			break
+		}
+	}
+
+	r.True(found, "Test not found")
+	r.Equal(foundTest.EverySecond, test.EverySecond, "Update failed")
+}
+
 func (r *RepositoryOtherTestSuite) TestSetCronId() {
 	counter := 10
 	testsBefore := make([]Test, 0)

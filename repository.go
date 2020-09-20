@@ -28,7 +28,7 @@ func (r *Repository) AddUserEvaluationRule(rules []UserEvaluationRule) error {
 // Return a UserEvaluationRule whose id is `ruleID`.
 func (r *Repository) GetUserEvaluationRule(ruleID int) (UserEvaluationRule, error) {
 	var rule UserEvaluationRule
-	result := r.db.Where("id = ?", ruleID).First(&rule)
+	result := r.db.Preload("Tests").Where("id = ?", ruleID).First(&rule)
 	return rule, result.Error
 }
 
