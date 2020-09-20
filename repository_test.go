@@ -5,18 +5,74 @@ import (
 	"testing"
 )
 
-type RepositoryTestSuite struct {
+type RepositoryAddTestSuite struct {
 	suite.Suite
 	repository                   Repository
 	availableUserEvaluationRules []UserEvaluationRule
 }
 
-func (r *RepositoryTestSuite) SetupTest() {
-	var err error
+func (r *RepositoryAddTestSuite) SetupTest() {
+	repository, rules := setup(r.Suite)
+	r.repository = repository
+	r.availableUserEvaluationRules = rules
+}
+
+func (r *RepositoryAddTestSuite) TestAdd() {
+	err := r.repository.AddUserEvaluationRule(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot add rules")
+
+	// now performs a select making sure the adding is ok
+	result, err := r.repository.GetAllUserEvaluationRulesToExecute()
+	r.Nil(err, "Cannot get rules")
+	r.Equal(len(result), len(r.availableUserEvaluationRules), "Len mismatch")
+}
+
+func (r *RepositoryAddTestSuite) TearDownTest() {
+	teardown(r.Suite, &r.repository, r.availableUserEvaluationRules)
+}
+
+type RepositoryOtherTestSuite struct {
+	suite.Suite
+	repository                   Repository
+	availableUserEvaluationRules []UserEvaluationRule
+}
+
+func (r *RepositoryOtherTestSuite) SetupTest() {
+	repository, rules := setup(r.Suite)
+	r.repository = repository
+	r.availableUserEvaluationRules = rules
+	// also add them
+	err := r.repository.AddUserEvaluationRule(r.availableUserEvaluationRules)
+	r.Nil(err, "Cannot add rules on setup")
+}
+
+func (r *RepositoryOtherTestSuite) TearDownTest() {
+	teardown(r.Suite, &r.repository, r.availableUserEvaluationRules)
+}
+
+func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
+	_, err := r.repository.GetUserEvaluationRule(r.availableUserEvaluationRules[0].Id)
+	r.Nil(err, "Cannot retrieve single rule")
+}
+
+func TestRepositoryTestSuite(t *testing.T) {
+	suite.Run(t, new(RepositoryAddTestSuite))
+}
+
+func TestRepositoryOtherTestSuite(t *testing.T) {
+	suite.Run(t, new(RepositoryOtherTestSuite))
+}
+
+func teardown(suite suite.Suite, repository *Repository, rules []UserEvaluationRule) {
+	err := repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(rules))
+	suite.Nil(err, "Cannot delete rules")
+}
+
+func setup(suite suite.Suite) (Repository, []UserEvaluationRule) {
 	repositoryOptions := NewRepositoryOptions()
-	r.repository, err = NewRepository(&repositoryOptions)
-	r.Nil(err, "Cannot connect to the database")
-	r.availableUserEvaluationRules = []UserEvaluationRule{
+	repository, err := NewRepository(&repositoryOptions)
+	suite.Nil(err, "Cannot connect to the database")
+	availableUserEvaluationRules := []UserEvaluationRule{
 		{
 			Id:     1,
 			UserId: 1,
@@ -37,25 +93,7 @@ func (r *RepositoryTestSuite) SetupTest() {
 			},
 		},
 	}
-}
-
-func (r *RepositoryTestSuite) TestAdd() {
-	err := r.repository.AddUserEvaluationRule(r.availableUserEvaluationRules)
-	r.Nil(err, "Cannot add rules")
-
-	// now performs a select making sure the adding is ok
-	result, err := r.repository.GetAllUserEvaluationRulesToExecute()
-	r.Nil(err, "Cannot get rules")
-	r.Equal(len(result), len(r.availableUserEvaluationRules), "Len mismatch")
-}
-
-func (r *RepositoryTestSuite) TearDownTest() {
-	err := r.repository.DeleteUserEvaluationRules(getIdsFromUserEvaluationRuleList(r.availableUserEvaluationRules))
-	r.Nil(err, "Cannot delete rules")
-}
-
-func TestRepositoryTestSuite(t *testing.T) {
-	suite.Run(t, new(RepositoryTestSuite))
+	return repository, availableUserEvaluationRules
 }
 
 //import (
