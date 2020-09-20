@@ -6,7 +6,7 @@ type Test struct {
 	Id                   int `gorm:"primaryKey"`
 	UserId               int
 	CronId               int  `gorm:"default:0"`
-	EverySecond          int  `gorm:"check:seconds >= 60"`
+	EverySecond          int  `gorm:"check:every_second >= 60"`
 	Paused               bool `gorm:"default:false"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time

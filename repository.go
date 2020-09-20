@@ -108,14 +108,27 @@ func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
 	tests := flatTests(rules)
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, test := range tests {
-			err := r.db.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
+			err := tx.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	})
-	// and then perform a single update
+	return err
+}
+
+// Update the schedule of `tests`. Updates are executed within a transaction.
+func (r *Repository) ChangeSchedule(tests []Test) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		for _, test := range tests {
+			err := tx.Model(&test).Updates(map[string]interface{}{"every_second": test.EverySecond}).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	return err
 }
 
