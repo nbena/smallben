@@ -39,6 +39,7 @@ func (s *SchedulerTestSuite) SetupTest() {
 }
 
 func (s *SchedulerTestSuite) TearDownTest() {
+	s.scheduler.DeleteUserEvaluationRules(s.availableUserEvaluationRules)
 	ctx := s.scheduler.cron.Stop()
 	<-ctx.Done()
 }
@@ -57,6 +58,18 @@ func (s *SchedulerTestSuite) TestAdd() {
 	// and they have all been added
 	entries := s.scheduler.cron.Entries()
 	s.Equal(len(entries), len(flatTests(modifiedRules)))
+}
+
+func (s *SchedulerTestSuite) TestDelete() {
+	modifiedRules, err := s.scheduler.AddUserEvaluationRule(s.availableUserEvaluationRules)
+	s.Nil(err, "Error should not happen")
+	// length of the inserted rules
+	lenBefore := len(s.scheduler.cron.Entries())
+
+	s.scheduler.DeleteUserEvaluationRules(modifiedRules)
+	lenAfter := len(s.scheduler.cron.Entries())
+
+	s.Equal(lenAfter+len(flatTests(s.availableUserEvaluationRules)), lenBefore, "len mismatch")
 }
 
 func TestSchedulerSuite(t *testing.T) {

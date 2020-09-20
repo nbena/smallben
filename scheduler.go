@@ -62,7 +62,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 func (s *Scheduler) DeleteUserEvaluationRules(rules []UserEvaluationRule) {
 	for _, rule := range rules {
 		for _, test := range rule.Tests {
-			s.cron.Remove(cron.EntryID(test.Id))
+			s.cron.Remove(cron.EntryID(test.CronId))
 		}
 	}
 }
