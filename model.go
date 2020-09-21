@@ -145,14 +145,18 @@ func GetIdsFromTestList(tests []Test) []int32 {
 // the schedule of a test.
 type UpdateSchedule struct {
 	// TestId is the ID of the tests
-	TestId int
+	TestId int32
 	// EverySecond is the new schedule
-	EverySecond int
+	EverySecond int32
+}
+
+func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
+	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", u.EverySecond))
 }
 
 // GetIdsFromUpdateScheduleList basically does schedules.map(test -> test.id)
-func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int {
-	ids := make([]int, len(schedules))
+func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int32 {
+	ids := make([]int32, len(schedules))
 	for i, test := range schedules {
 		ids[i] = test.TestId
 	}
