@@ -1,6 +1,10 @@
 package smallben
 
-import "time"
+import (
+	"fmt"
+	"github.com/robfig/cron/v3"
+	"time"
+)
 
 type Test struct {
 	Id                   int `gorm:"primaryKey"`
@@ -13,12 +17,16 @@ type Test struct {
 	UserEvaluationRuleId uint `gorm:"column:user_evaluation_rule_id"`
 }
 
-func (t *Test) toRunFunctionInput() runFunctionInput {
-	return runFunctionInput{
+func (t *Test) toRunFunctionInput() *runFunctionInput {
+	return &runFunctionInput{
 		testID:               t.Id,
 		userEvaluationRuleId: int(t.UserEvaluationRuleId),
 		userID:               t.UserId,
 	}
+}
+
+func (t *Test) schedule() (cron.Schedule, error) {
+	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
 }
 
 type UserEvaluationRule struct {

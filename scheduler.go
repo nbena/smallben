@@ -16,6 +16,31 @@ func NewScheduler() Scheduler {
 	}
 }
 
+// AddUserEvaluationRules adds `rules' to the scheduler. It returns an error in case
+// the schedule is invalid.
+func (s *Scheduler) AddUserEvaluationRules(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
+	tests := FlatTests(rules)
+	modifiedRules := rules
+
+	schedules := make([]cron.Schedule, len(tests))
+	jobs := make([]cron.Job, len(tests))
+
+	for i, test := range tests {
+		schedule, err := test.schedule()
+		if err != nil {
+			return nil, err
+		}
+		schedules[i] = schedule
+		jobs[i] = test.toRunFunctionInput()
+	}
+
+	for i := 0; i < len(schedules); i++ {
+		entryID := s.cron.Schedule(schedules[i], jobs[i])
+		tests[i].CronId = int(entryID)
+	}
+	return modifiedRules, nil
+}
+
 func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
 
 	var collectedEntries []cron.EntryID
@@ -42,7 +67,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 			var entryID cron.EntryID
 			// add the entry to the scheduler
 			entryID, err = s.cron.AddFunc(getCronSchedule(rule.Tests[j].EverySecond), func() {
-				runFunction(input)
+				input.Run()
 			})
 			// we can return without worrying about spurious element
 			// since we have the defer function removing any added element
@@ -81,7 +106,7 @@ func (s *Scheduler) AddTests(tests []Test) ([]Test, error) {
 		input := test.toRunFunctionInput()
 		var entryID cron.EntryID
 		entryID, err = s.cron.AddFunc(getCronSchedule(test.EverySecond), func() {
-			runFunction(input)
+			input.Run()
 		})
 		if err != nil {
 			return modifiedTests, err
@@ -117,6 +142,6 @@ type runFunctionInput struct {
 	userID               int
 }
 
-func runFunction(input runFunctionInput) {
+func (r *runFunctionInput) Run() {
 	fmt.Printf("Im running\n")
 }
