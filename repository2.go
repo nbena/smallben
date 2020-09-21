@@ -5,6 +5,7 @@ import (
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"log"
 	"time"
 )
 
@@ -79,12 +80,16 @@ func (r *Repository2) AddTests(ctx context.Context, tests []Test) error {
 
 // GetTest returns a TestWithSchedule whose id is `testID`.
 func (r *Repository2) GetTest(ctx context.Context, testID int32) (TestWithSchedule, error) {
-	var test Test
-	err := pgxscan.Select(ctx, &r.pool, &test, `select id, user_id, cron_id, every_second,
+	var tests []Test
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
 paused, created_at, updated_at, user_evaluation_rule_id from tests where id=$1`, testID)
 	if err != nil {
 		return TestWithSchedule{}, err
 	}
+	if len(tests) == 0 {
+		return TestWithSchedule{}, pgx.ErrNoRows
+	}
+	test := tests[0]
 	testWithSchedule, err := (&test).ToTestWithSchedule()
 	return testWithSchedule, err
 }
@@ -164,7 +169,7 @@ func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
 
 	// prepare the batch request
 	for _, test := range tests {
-		batch.Queue("update tests set every_second = $2, updated_at = $3, where id = $1",
+		batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
 			test.Id, test.EverySecond, time.Now())
 	}
 
@@ -172,7 +177,9 @@ func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
 	result = tx.SendBatch(ctx, &batch)
 	_, err = result.Exec()
 	if err != nil {
+		log.Printf("Got error on result.Exec()")
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			log.Printf("Got error on tx.Rollback(), err: %s", err.Error())
 			// log the rollback error, there is nothing more we can do...
 		}
 		return err
@@ -181,9 +188,11 @@ func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
 		// well, what do? Just try to rollback
 		if err = tx.Rollback(ctx); err != nil {
 			// nothing more to do to.
+			return err
 		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func (r *Repository2) transactionUpdate(ctx context.Context, tests []Test, getBatchFn func(test *Test, batch *pgx.Batch)) error {
@@ -232,7 +241,7 @@ func (r *Repository2) SetCronId(ctx context.Context, tests []Test) error {
 		ctx,
 		tests,
 		func(test *Test, batch *pgx.Batch) {
-			batch.Queue("update tests set cron_id = $2, updated_at = $3, where id = $1",
+			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
 				test.Id, test.CronId, time.Now())
 		},
 	)
