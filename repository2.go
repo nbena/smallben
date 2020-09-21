@@ -27,7 +27,7 @@ func NewRepository2(ctx context.Context, options *pgxpool.Config) (Repository2, 
 
 // AddTests add `tests` within to the database. The update is done by using a batch
 // in a transaction.
-func (r *Repository2) AddTests(ctx context.Context, tests []TestInfo) error {
+func (r *Repository2) AddTests(ctx context.Context, tests []Test) error {
 	// create the batch of requests
 	var batch pgx.Batch
 	var result pgx.BatchResults
@@ -44,7 +44,7 @@ func (r *Repository2) AddTests(ctx context.Context, tests []TestInfo) error {
 (id, user_evaluation_rule_id, user_id, paused, every_second, created_at, updated_at)
 values
 ($1, $2, $3, false, $4, $5, $6)
-`, test.Id(), test.UserEvaluationRuleId(), test.UserEvaluationRuleId(), test.EverySecond(), time.Now(), time.Now())
+`, test.Id, test.UserEvaluationRuleId, test.UserId, test.EverySecond, time.Now(), time.Now())
 	}
 
 	// now, send the batch requests
@@ -173,4 +173,8 @@ func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
 		return pgx.ErrNoRows
 	}
 	return err
+}
+
+func (r *Repository2) SetCronId(tests []Test) error {
+	return nil
 }

@@ -2,6 +2,7 @@ package smallben
 
 import (
 	"fmt"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/spf13/viper"
 	"log"
 )
@@ -12,6 +13,7 @@ const (
 	KeyDbPort     = "DB_PORT"
 	KeyDbUserName = "DB_USERNAME"
 	KeyDbPassword = "DB_PASSWORD"
+	KeyDbURL      = "DB_CONNECTION_URL"
 )
 
 type RepositoryOptions struct {
@@ -20,6 +22,10 @@ type RepositoryOptions struct {
 	Port     int
 	User     string
 	Password string
+}
+
+func PgRepositoryOptions() (*pgxpool.Config, error) {
+	return pgxpool.ParseConfig(viper.GetString(KeyDbURL))
 }
 
 func NewRepositoryOptions() RepositoryOptions {
@@ -43,6 +49,7 @@ func init() {
 		KeyDbPort,
 		KeyDbUserName,
 		KeyDbPassword,
+		KeyDbURL,
 	}
 
 	for _, key := range vipers {
