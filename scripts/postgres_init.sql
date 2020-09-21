@@ -1,15 +1,3 @@
-create table if not exists user_evaluation_rules (
-    -- the user evaluation rule id
-    id integer primary key,
-    -- the user_id owning this user evaluation rule
-    user_id integer not null,
-    -- when the item has been created
-    created_at timestamp,
-    -- when the item has been updated last time
-    updated_at timestamp,
-    unique(id, user_id)
-);
-
 create table if not exists tests (
     -- the test rule id
     id integer primary key,
@@ -28,7 +16,5 @@ create table if not exists tests (
     created_at timestamp,
     -- when the item has been updated last time
     updated_at timestamp,
-    constraint test_fk_uer foreign key (user_evaluation_rule_id)
-        references user_evaluation_rules(id) on update cascade on delete cascade,
     unique(id, user_evaluation_rule_id, user_id)
 );

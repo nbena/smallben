@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+type TestInfo interface {
+	Id() int
+	UserId() int
+	CronId() int
+	EverySecond() int
+	Paused() bool
+	CreatedAt() *time.Time
+	UpdatedAt() *time.Time
+	UserEvaluationRuleId() int
+}
+
 type Test struct {
 	Id                   int `gorm:"primaryKey"`
 	UserId               int
@@ -15,6 +26,35 @@ type Test struct {
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	UserEvaluationRuleId uint `gorm:"column:user_evaluation_rule_id"`
+}
+
+type TestWithSchedule struct {
+	Test
+	Schedule cron.Schedule
+}
+
+// ToTestWithSchedule returns a TestWithSchedule object from the current Test,
+// by copy. It returns errors in case the given schedule is not valid.
+func (t *Test) ToTestWithSchedule() (TestWithSchedule, error) {
+	var result TestWithSchedule
+	schedule, err := cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
+	if err != nil {
+		return result, err
+	}
+	result = TestWithSchedule{
+		Test: Test{
+			Id:                   t.UserId,
+			UserId:               t.UserId,
+			CronId:               t.CronId,
+			EverySecond:          t.EverySecond,
+			Paused:               t.Paused,
+			CreatedAt:            t.CreatedAt,
+			UpdatedAt:            t.UpdatedAt,
+			UserEvaluationRuleId: t.UserEvaluationRuleId,
+		},
+		Schedule: schedule,
+	}
+	return result, nil
 }
 
 func (t *Test) toRunFunctionInput() *runFunctionInput {

@@ -16,28 +16,22 @@ func NewScheduler() Scheduler {
 	}
 }
 
-// AddTests2 adds `test` to the scheduler. It returns an error in case
-// the schedule is invalid, otherwise it never fails.
-// The returned tests contains the modified `cron_id.`.
-func (s *Scheduler) AddTests2(tests []Test) ([]Test, error) {
+// AddTests2 adds `test` to the scheduler. This function never fails and updates
+// the input array with the `CronId`.
+func (s *Scheduler) AddTests2(tests []TestWithSchedule) {
 
-	schedules := make([]cron.Schedule, len(tests))
-	jobs := make([]cron.Job, len(tests))
-
-	for i, test := range tests {
-		schedule, err := test.schedule()
-		if err != nil {
-			return nil, err
-		}
-		schedules[i] = schedule
-		jobs[i] = test.toRunFunctionInput()
+	for _, test := range tests {
+		job := test.toRunFunctionInput()
+		entryID := s.cron.Schedule(test.Schedule, job)
+		test.CronId = int(entryID)
 	}
+}
 
-	for i := 0; i < len(schedules); i++ {
-		entryID := s.cron.Schedule(schedules[i], jobs[i])
-		tests[i].CronId = int(entryID)
+// DeleteTests2 remove `tests` from the scheduler. This function never fails.
+func (s *Scheduler) DeleteTests2(tests []TestInfo) {
+	for _, test := range tests {
+		s.cron.Remove(cron.EntryID(test.CronId()))
 	}
-	return tests, nil
 }
 
 func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
