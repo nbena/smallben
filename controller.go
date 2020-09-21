@@ -52,7 +52,23 @@ func (s *SmallBen) Fill(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.AddTests(ctx, tests)
+	// now, build the TestWithSchedule object
+	testsWithSchedule := make([]TestWithSchedule, len(tests))
+	for i, test := range tests {
+		testsWithSchedule[i], err = test.ToTestWithSchedule()
+		if err != nil {
+			return err
+		}
+	}
+	// now, add them to the scheduler
+	s.scheduler.AddTests2(testsWithSchedule)
+	// now, update the db by updating the cron entries
+	err = s.repository.SetCronIdOfTestsWithSchedule(ctx, testsWithSchedule)
+	if err != nil {
+		// if there is an error, remove them from the scheduler
+		s.scheduler.DeleteTestsWithSchedule(testsWithSchedule)
+	}
+	return nil
 }
 
 // AddTests add `tests` to the scheduler, by saving also them to the database.

@@ -28,7 +28,7 @@ func NewRepository2(ctx context.Context, options *pgxpool.Config) (Repository2, 
 
 // AddTests add `tests` within to the database. The update is done by using a batch
 // in a transaction.
-func (r *Repository2) AddTests(ctx context.Context, tests []Test) error {
+func (r *Repository2) AddTests(ctx context.Context, tests []TestWithSchedule) error {
 	rows := make([][]interface{}, len(tests))
 	for i, test := range tests {
 		rows[i] = test.addToRaw()
@@ -113,47 +113,35 @@ func (r *Repository2) DeleteTestsByKeys(ctx context.Context, testsID []int32) er
 	return nil
 }
 
-// ChangeSchedule update `tests` by saving in the database the new schedule.
-// Execution is done within a transaction.
-func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
-	return r.transactionUpdate(
-		ctx,
-		tests,
-		func(test *Test, batch *pgx.Batch) {
-			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
-				test.Id, test.EverySecond, time.Now())
-		})
-}
+//// ChangeSchedule update `tests` by saving in the database the new schedule.
+//// Execution is done within a transaction.
+//func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
+//	return r.transactionUpdate(
+//		ctx,
+//		tests,
+//		func(test *Test, batch *pgx.Batch) {
+//			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
+//				test.Id, test.EverySecond, time.Now())
+//		})
+//}
 
-// ChangeScheduleOfTestsWithSchedule update `tests` by saving in the database the new schedule.
-// Execution is done within a transaction.
-func (r *Repository2) ChangeScheduleOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
-	rawTests := make([]Test, len(tests))
-	for i, test := range tests {
-		rawTests[i] = test.Test
-	}
-	return r.transactionUpdate(
-		ctx,
-		rawTests,
-		func(test *Test, batch *pgx.Batch) {
-			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
-				test.Id, test.EverySecond, time.Now())
-		})
-}
+//// ChangeScheduleOfTestsWithSchedule update `tests` by saving in the database the new schedule.
+//// Execution is done within a transaction.
+//func (r *Repository2) ChangeScheduleOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
+//	rawTests := make([]Test, len(tests))
+//	for i, test := range tests {
+//		rawTests[i] = test.Test
+//	}
+//	return r.transactionUpdate(
+//		ctx,
+//		rawTests,
+//		func(test *Test, batch *pgx.Batch) {
+//			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
+//				test.Id, test.EverySecond, time.Now())
+//		})
+//}
 
-// SetCronId updates `tests` by updating the `cron_id` field.
-func (r *Repository2) SetCronId(ctx context.Context, tests []Test) error {
-	return r.transactionUpdate(
-		ctx,
-		tests,
-		func(test *Test, batch *pgx.Batch) {
-			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
-				test.Id, test.CronId, time.Now())
-		},
-	)
-}
-
-// SetCronIdOfTestWithSchedule updates `tests` by updating the `cron_id` field.
+// SetCronIdOfTestsWithSchedule updates `tests` by updating the `cron_id` field.
 func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
 	rawTests := make([]Test, len(tests))
 	for i, test := range tests {

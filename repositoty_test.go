@@ -22,7 +22,9 @@ func (r *RepositoryAddTestSuite) SetupTest() {
 }
 
 func (r *RepositoryAddTestSuite) TestAdd() {
-	err := r.repository.AddTests(ctx, r.tests)
+	schedules := buildSchedule(r)
+
+	err := r.repository.AddTests(ctx, schedules)
 	r.Nil(err, "Cannot add tests")
 
 	// now performs a select making sure the adding is ok
@@ -47,8 +49,11 @@ func (r *RepositoryOtherTestSuite) SetupTest() {
 	r.repository = repository
 	r.tests = tests
 	r.okDeleteError = false
+
+	schedules := buildSchedule(r)
+
 	// also add them
-	err := r.repository.AddTests(ctx, r.tests)
+	err := r.repository.AddTests(ctx, schedules)
 	r.Nil(err, "Cannot add tests on setup")
 }
 
@@ -96,8 +101,10 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 	test.EverySecond += 50
 
 	// create the array of tests
-	tests := []Test{test}
-	err := r.repository.ChangeSchedule(ctx, tests)
+	tests := []TestWithSchedule{{
+		Test: test,
+	}}
+	err := r.repository.SetCronIdAndChangeSchedule(ctx, tests)
 	r.Nil(err, "Cannot change schedule")
 
 	newTest, err := r.repository.GetTest(ctx, test.Id)
@@ -115,7 +122,14 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 		testsBefore = append(testsBefore, test)
 	}
 
-	err := r.repository.SetCronId(ctx, testsBefore)
+	schedules := make([]TestWithSchedule, len(testsBefore))
+	for i, test := range testsBefore {
+		schedules[i] = TestWithSchedule{
+			Test: test,
+		}
+	}
+
+	err := r.repository.SetCronIdOfTestsWithSchedule(ctx, schedules)
 	r.Nil(err, "Cannot set cron id of")
 
 	testsAfter, err := r.repository.GetAllTestsToExecute(ctx)
@@ -213,4 +227,17 @@ func setup(suite suite.Suite) (Repository2, []Test) {
 		},
 	}
 	return repository, tests
+}
+
+func buildSchedule(r RepositoryTest) []TestWithSchedule {
+	withSchedule := make([]TestWithSchedule, len(r.Tests()))
+	for i, test := range r.Tests() {
+		testWithSchedule, err := test.ToTestWithSchedule()
+		r.TestSuite().Nil(err, "Cannot build test with schedule")
+		if err != nil {
+			r.TestSuite().FailNow("Cannot go on with test conversion fails")
+		}
+		withSchedule[i] = testWithSchedule
+	}
+	return withSchedule
 }
