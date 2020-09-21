@@ -61,7 +61,7 @@ type TestWithSchedule struct {
 // by copy. It returns errors in case the given schedule is not valid.
 func (t *Test) ToTestWithSchedule() (TestWithSchedule, error) {
 	var result TestWithSchedule
-	schedule, err := cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
+	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", t.EverySecond))
 	if err != nil {
 		return result, err
 	}
