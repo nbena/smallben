@@ -1,147 +1,240 @@
 package smallben
 
 import (
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"context"
+	"github.com/georgysavva/scany/pgxscan"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"log"
+	"time"
 )
 
-type Repository struct {
-	db *gorm.DB
+// Repository2 is used to manage the operations within the Postgres
+// backend. It is created with the function `NewRepository2`.
+type Repository2 struct {
+	pool pgxpool.Pool
 }
 
-func NewRepository(connectionOptions *RepositoryOptions) (Repository, error) {
-	db, err := gorm.Open(postgres.Open(connectionOptions.String()), &gorm.Config{})
+// NewRepository2 returns an instance of Repository2.
+func NewRepository2(ctx context.Context, options *pgxpool.Config) (Repository2, error) {
+	pool, err := pgxpool.ConnectConfig(ctx, options)
 	if err != nil {
-		return Repository{}, err
+		return Repository2{}, err
 	}
-	return Repository{db: db}, nil
+	return Repository2{
+		pool: *pool,
+	}, nil
 }
 
-// Create a new UserEvaluationRule storing it within the database.
-func (r *Repository) AddUserEvaluationRule(rules []UserEvaluationRule) error {
-	// the create operation is already executed within a transaction
-	// and all the child items.
-	// It works for a list of items as well.
-	return r.db.Create(rules).Error
-}
+// AddTests add `tests` within to the database. The update is done by using a batch
+// in a transaction.
+func (r *Repository2) AddTests(ctx context.Context, tests []Test) error {
+	rows := make([][]interface{}, len(tests))
+	for i, test := range tests {
+		rows[i] = test.addToRaw()
+	}
 
-// Return a UserEvaluationRule whose id is `ruleID`.
-func (r *Repository) GetUserEvaluationRule(ruleID int) (UserEvaluationRule, error) {
-	var rule UserEvaluationRule
-	result := r.db.Preload("Tests").Where("id = ?", ruleID).First(&rule)
-	return rule, result.Error
-}
-
-func (r *Repository) PauseUserEvaluationRules(rules []UserEvaluationRule) error {
-	//return r.db.Model(rule.Tests[0]).Where(
-	//	"user_evaluation_rule_id = ?", rule.Id).Updates(map[string]interface{}{"paused": true, "CronId": 0}).Error
-	ids := GetIdsFromUserEvaluationRuleList(rules)
-	return r.db.Debug().Table("tests").Where("user_evaluation_rule_id in ?", ids).Updates(map[string]interface{}{"paused": true}).Error
-}
-
-// Resume `rule`. This function updates the whole Test of `rules`, *and* set `paused=false`.
-func (r *Repository) ResumeUserEvaluationRule(rules []UserEvaluationRule) error {
-	tests := FlatTests(rules)
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		for _, test := range tests {
-			err := r.db.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
-}
-
-func (r *Repository) deleteUserEvaluationRule(rule *UserEvaluationRule) error {
-	result := r.db.Delete(rule, rule.Id)
-	if err := result.Error; err != nil {
+	copyCount, err := r.pool.CopyFrom(ctx, pgx.Identifier{"tests"}, addToColumn(), pgx.CopyFromRows(rows))
+	if err != nil {
 		return err
 	}
-	if result.RowsAffected != 1 {
-		return gorm.ErrRecordNotFound
+	if copyCount != int64(len(tests)) {
+		return pgx.ErrNoRows
 	}
 	return nil
 }
 
-// Delete a UserEvaluationRule whose id is `ruleID`. It fails if the record has not been found.
-func (r *Repository) DeleteUserEvaluationRuleByKey(ruleID int) error {
-	rule := UserEvaluationRule{Id: ruleID}
-	return r.deleteUserEvaluationRule(&rule)
-}
-
-// Delete a UserEvaluationRule.
-func (r *Repository) DeleteUserEvaluationRule(rule *UserEvaluationRule) error {
-	return r.deleteUserEvaluationRule(rule)
-}
-
-func (r *Repository) DeleteUserEvaluationRules(rulesID []int) error {
-	var rules []UserEvaluationRule
-	result := r.db.Delete(&rules, rulesID)
-	if err := result.Error; err != nil {
-		return err
-	}
-	if result.RowsAffected != int64(len(rulesID)) {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
-}
-
-// Returns all the UserEvaluationRule to execute (i.e., `.test.paused = false`).
-func (r *Repository) GetAllUserEvaluationRulesToExecute() ([]UserEvaluationRule, error) {
-	var rules []UserEvaluationRule
-
-	// corresponds to select * from user_evaluation_rules join test where uer.id
-	// in (select id from user_evaluation_rules where id in (select user_evaluation_rule_id from tests
-	// where paused = false))
-	result := r.db.Debug().Preload("Tests").Where("id in (?)",
-		r.db.Table("user_evaluation_rules").Select("id").Where("id in (?)",
-			r.db.Table("tests").Select("user_evaluation_rule_id").Where("paused = false"))).Find(&rules).Error
-
-	return rules, result
-}
-
-// SetCronIdOf updates the cron id of `rules` in a transactional way.
-func (r *Repository) SetCronIdOf(rules []UserEvaluationRule) error {
-	// flattening all the tests
-	tests := FlatTests(rules)
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		for _, test := range tests {
-			err := tx.Debug().Model(&test).Updates(map[string]interface{}{"cron_id": test.CronId, "paused": false}).Error
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
-}
-
-// ChangeSchedule update the schedule of `tests`. Updates are executed within a transaction.
-func (r *Repository) ChangeSchedule(tests []Test) error {
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		for _, test := range tests {
-			err := tx.Model(&test).Updates(map[string]interface{}{"every_second": test.EverySecond}).Error
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
-}
-
-// GetTests returns all the tests whose id are in `ids`.
-// Returns an error if one of such id has no correspondence.
-func (r *Repository) GetTests(ids []int) ([]Test, error) {
+// GetTest returns a TestWithSchedule whose id is `testID`.
+func (r *Repository2) GetTest(ctx context.Context, testID int32) (TestWithSchedule, error) {
 	var tests []Test
-	err := r.db.Where("id in (?)", ids).Find(&tests).Error
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
+paused, created_at, updated_at, user_evaluation_rule_id from tests where id=$1`, testID)
 	if err != nil {
-		return tests, err
+		return TestWithSchedule{}, err
 	}
-	if len(tests) != len(ids) {
-		return tests, gorm.ErrRecordNotFound
+	if len(tests) == 0 {
+		return TestWithSchedule{}, pgx.ErrNoRows
 	}
-	return tests, nil
+	test := tests[0]
+	testWithSchedule, err := (&test).ToTestWithSchedule()
+	return testWithSchedule, err
+}
+
+// PauseTests pauses `tests`, i.e., changing the `paused` field to `true`.
+func (r *Repository2) PauseTests(ctx context.Context, tests []Test) error {
+	ids := GetIdsFromTestList(tests)
+	_, err := r.pool.Exec(ctx, `update tests set paused = true where id = any($1)`, ids)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// ResumeTests resumes `tests`, i.e., changing the `paused` field to `false`.
+func (r *Repository2) ResumeTests(ctx context.Context, tests []Test) error {
+	ids := GetIdsFromTestList(tests)
+	_, err := r.pool.Exec(ctx, `update tests set paused = false where id = any($1)`, ids)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetAllTestsToExecute returns all the test whose `paused` field is set to `false`.
+func (r *Repository2) GetAllTestsToExecute(ctx context.Context) ([]Test, error) {
+	var tests []Test
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
+paused, created_at, updated_at, user_evaluation_rule_id from tests where paused = false`)
+	return tests, err
+}
+
+// GetTestsByKeys returns all the tests whose primary key are in `testsID`. It returns an
+// error of type `pgx.ErrNoRow` in case there is a mismatch between the length of the returned
+// tests and of the input.
+func (r *Repository2) GetTestsByKeys(ctx context.Context, testsID []int32) ([]Test, error) {
+	var tests []Test
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select select id, user_id, cron_id, every_second,
+paused, created_at, updated_at, user_evaluation_rule_id from tests where id = any($1)`, testsID)
+	if err != nil {
+		return nil, err
+	}
+	if len(tests) != len(testsID) {
+		return nil, pgx.ErrNoRows
+	}
+	return tests, err
+}
+
+// DeleteTestsByKeys deletes the tests whose id are in `testsID`.
+func (r *Repository2) DeleteTestsByKeys(ctx context.Context, testsID []int32) error {
+	_, err := r.pool.Exec(ctx, "delete from tests where id = any($1)", testsID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ChangeSchedule update `tests` by saving in the database the new schedule.
+// Execution is done within a transaction.
+func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
+	return r.transactionUpdate(
+		ctx,
+		tests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
+				test.Id, test.EverySecond, time.Now())
+		})
+}
+
+// ChangeScheduleOfTestsWithSchedule update `tests` by saving in the database the new schedule.
+// Execution is done within a transaction.
+func (r *Repository2) ChangeScheduleOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
+	rawTests := make([]Test, len(tests))
+	for i, test := range tests {
+		rawTests[i] = test.Test
+	}
+	return r.transactionUpdate(
+		ctx,
+		rawTests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
+				test.Id, test.EverySecond, time.Now())
+		})
+}
+
+// SetCronId updates `tests` by updating the `cron_id` field.
+func (r *Repository2) SetCronId(ctx context.Context, tests []Test) error {
+	return r.transactionUpdate(
+		ctx,
+		tests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
+				test.Id, test.CronId, time.Now())
+		},
+	)
+}
+
+// SetCronIdOfTestWithSchedule updates `tests` by updating the `cron_id` field.
+func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
+	rawTests := make([]Test, len(tests))
+	for i, test := range tests {
+		rawTests[i] = test.Test
+	}
+	return r.transactionUpdate(
+		ctx,
+		rawTests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
+				test.Id, test.CronId, time.Now())
+		},
+	)
+}
+
+// SetCronIdAndChangeSchedule updates the `cron_id` and the `every_second` field.
+func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, tests []TestWithSchedule) error {
+	rawTests := make([]Test, len(tests))
+	for i, test := range tests {
+		rawTests[i] = test.Test
+	}
+	return r.transactionUpdate(
+		ctx,
+		rawTests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set cron_id = $2, every_second = $3 updated_at = $4 where id = $1",
+				test.Id, test.CronId, test.EverySecond, time.Now())
+		},
+	)
+}
+
+func (r *Repository2) transactionUpdate(ctx context.Context, tests []Test, getBatchFn func(test *Test, batch *pgx.Batch)) error {
+	// create the batch of requests
+	var batch pgx.Batch
+	var result pgx.BatchResults
+	var err error
+
+	// start the transaction
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Begin transaction\n")
+
+	// prepare the batch request
+	for _, test := range tests {
+		getBatchFn(&test, &batch)
+	}
+
+	// now, send the batch requests
+	result = tx.SendBatch(ctx, &batch)
+	_, err = result.Exec()
+	if err != nil {
+		log.Printf("Got error on result.Exec()")
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			log.Printf("Got error on tx.Rollback(), err: %s", err.Error())
+			// log the rollback error, there is nothing more we can do...
+		}
+		return err
+	}
+	// before commit, I need to close the result
+	if err = result.Close(); err != nil {
+		// try rolling back
+		log.Printf("Error on closing the result: %s\n", err.Error())
+		if err = tx.Rollback(ctx); err != nil {
+			log.Printf("Error on rollback: %s\n", err.Error())
+			// nothing more to do to.
+			return err
+		}
+		return err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("Error on commit: %s\n", err.Error())
+		// well, what do? Just try to rollback
+		if err = tx.Rollback(ctx); err != nil {
+			log.Printf("Error on rollback: %s\n", err.Error())
+			// nothing more to do to.
+			return err
+		}
+		return err
+	}
+	return nil
 }
