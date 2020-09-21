@@ -187,7 +187,7 @@ func teardown2(t RepositoryTest, okError bool) {
 
 func setup(suite suite.Suite) (Repository2, []Test) {
 	ctx := context.Background()
-	repositoryOptions, err := PgRepositoryOptions()
+	repositoryOptions, err := PgRepositoryOptionsFromEnv()
 	suite.Nil(err, "Cannot get the correct config")
 	if err != nil {
 		suite.FailNow("Cannot go on.")

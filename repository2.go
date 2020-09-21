@@ -137,6 +137,22 @@ func (r *Repository2) SetCronId(ctx context.Context, tests []Test) error {
 	)
 }
 
+// SetCronIdOfTestWithSchedule updates `tests` by updating the `cron_id` field.
+func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
+	rawTests := make([]Test, len(tests))
+	for i, test := range tests {
+		rawTests[i] = test.Test
+	}
+	return r.transactionUpdate(
+		ctx,
+		rawTests,
+		func(test *Test, batch *pgx.Batch) {
+			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
+				test.Id, test.CronId, time.Now())
+		},
+	)
+}
+
 func (r *Repository2) transactionUpdate(ctx context.Context, tests []Test, getBatchFn func(test *Test, batch *pgx.Batch)) error {
 	// create the batch of requests
 	var batch pgx.Batch
@@ -154,9 +170,6 @@ func (r *Repository2) transactionUpdate(ctx context.Context, tests []Test, getBa
 	// prepare the batch request
 	for _, test := range tests {
 		getBatchFn(&test, &batch)
-
-		//batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
-		//	test.Id, test.EverySecond, time.Now())
 	}
 
 	// now, send the batch requests

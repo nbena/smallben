@@ -27,10 +27,10 @@ func (s *Scheduler) AddTests2(tests []TestWithSchedule) {
 	}
 }
 
-// DeleteTests2 remove `tests` from the scheduler. This function never fails.
-func (s *Scheduler) DeleteTests2(tests []TestInfo) {
+// DeleteTestsWithSchedule remove `tests` from the scheduler. This function never fails.
+func (s *Scheduler) DeleteTestsWithSchedule(tests []TestWithSchedule) {
 	for _, test := range tests {
-		s.cron.Remove(cron.EntryID(test.CronId()))
+		s.cron.Remove(cron.EntryID(test.CronId))
 	}
 }
 

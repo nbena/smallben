@@ -24,8 +24,12 @@ type RepositoryOptions struct {
 	Password string
 }
 
-func PgRepositoryOptions() (*pgxpool.Config, error) {
-	return pgxpool.ParseConfig(viper.GetString(KeyDbURL))
+func PgRepositoryOptions(connString string) (*pgxpool.Config, error) {
+	return pgxpool.ParseConfig(connString)
+}
+
+func PgRepositoryOptionsFromEnv() (*pgxpool.Config, error) {
+	return PgRepositoryOptions(viper.GetString(KeyDbURL))
 }
 
 func NewRepositoryOptions() RepositoryOptions {
