@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// To be used when dealing with generics.
 type TestInfo interface {
 	Id() int
 	UserId() int
@@ -18,14 +19,14 @@ type TestInfo interface {
 }
 
 type Test struct {
-	Id                   int32 `gorm:"primaryKey"`
+	Id                   int32
 	UserId               int32
-	CronId               int32 `gorm:"default:0"`
-	EverySecond          int32 `gorm:"check:every_second >= 60"`
-	Paused               bool  `gorm:"default:false"`
+	CronId               int32
+	EverySecond          int32
+	Paused               bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	UserEvaluationRuleId int32 `gorm:"column:user_evaluation_rule_id"`
+	UserEvaluationRuleId int32
 }
 
 func (t *Test) addToRaw() []interface{} {
