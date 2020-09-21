@@ -13,8 +13,15 @@ create table if not exists tests (
     -- id of the cron entry
     cron_id integer not null default 0,
     -- when the item has been created
-    created_at timestamp,
+    created_at timestamp with time zone not null default current_timestamp,
     -- when the item has been updated last time
-    updated_at timestamp,
+    updated_at timestamp  with time zone not null default current_timestamp,
     unique(id, user_evaluation_rule_id, user_id)
 );
+
+-- index on the paused field
+create index if not exists paused_idx on tests(paused);
+-- index on the user evaluation rule id
+create index if not exists user_evaluation_rule_idx on tests(user_evaluation_rule_id);
+-- index on the user id
+create index if not exists user_id_idx on tests(user_id);

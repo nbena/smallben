@@ -7,11 +7,12 @@ import (
 	"testing"
 )
 
+var ctx = context.Background()
+
 type RepositoryAddTestSuite struct {
 	suite.Suite
 	repository Repository2
 	tests      []Test
-	ctx        context.Context
 }
 
 func (r *RepositoryAddTestSuite) SetupTest() {
@@ -21,11 +22,11 @@ func (r *RepositoryAddTestSuite) SetupTest() {
 }
 
 func (r *RepositoryAddTestSuite) TestAdd() {
-	err := r.repository.AddTests(r.ctx, r.tests)
+	err := r.repository.AddTests(ctx, r.tests)
 	r.Nil(err, "Cannot add tests")
 
 	// now performs a select making sure the adding is ok
-	result, err := r.repository.GetAllTestsToExecute(r.ctx)
+	result, err := r.repository.GetAllTestsToExecute(ctx)
 	r.Nil(err, "Cannot get rules")
 	r.Equal(len(result), len(r.tests), "Len mismatch")
 }
@@ -39,7 +40,6 @@ type RepositoryOtherTestSuite struct {
 	repository    Repository2
 	tests         []Test
 	okDeleteError bool
-	ctx           context.Context
 }
 
 func (r *RepositoryOtherTestSuite) SetupTest() {
@@ -48,7 +48,7 @@ func (r *RepositoryOtherTestSuite) SetupTest() {
 	r.tests = tests
 	r.okDeleteError = false
 	// also add them
-	err := r.repository.AddTests(r.ctx, r.tests)
+	err := r.repository.AddTests(ctx, r.tests)
 	r.Nil(err, "Cannot add tests on setup")
 }
 
@@ -57,34 +57,34 @@ func (r *RepositoryOtherTestSuite) TearDownTest() {
 }
 
 func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
-	_, err := r.repository.GetTest(r.ctx, r.tests[0].Id)
+	_, err := r.repository.GetTest(ctx, r.tests[0].Id)
 	r.Nil(err, "Cannot retrieve single test")
 }
 
 func (r *RepositoryOtherTestSuite) TestDelete() {
-	err := r.repository.DeleteTestsByKeys(r.ctx, GetIdsFromTestList(r.tests))
+	err := r.repository.DeleteTestsByKeys(ctx, GetIdsFromTestList(r.tests))
 	r.Nil(err, "Cannot delete tests")
 	r.okDeleteError = true
 }
 
 func (r *RepositoryOtherTestSuite) TestPause() {
-	err := r.repository.PauseTests(r.ctx, r.tests)
+	err := r.repository.PauseTests(ctx, r.tests)
 	r.Nil(err, "Cannot pause tests")
 
 	// now we retrieve them
-	tests, err := r.repository.GetAllTestsToExecute(r.ctx)
+	tests, err := r.repository.GetAllTestsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 	r.NotContains(GetIdsFromTestList(r.tests), GetIdsFromTestList(tests), "Contains failed")
 }
 
 func (r *RepositoryOtherTestSuite) TestResume() {
-	err := r.repository.PauseTests(r.ctx, r.tests)
+	err := r.repository.PauseTests(ctx, r.tests)
 	r.Nil(err, "Cannot pause tests")
 
-	err = r.repository.ResumeTests(r.ctx, r.tests)
+	err = r.repository.ResumeTests(ctx, r.tests)
 	r.Nil(err, "Cannot resume tests")
 
-	tests, err := r.repository.GetAllTestsToExecute(r.ctx)
+	tests, err := r.repository.GetAllTestsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 
 	r.Equal(len(r.tests), len(tests), "Len mismatch")
@@ -97,17 +97,17 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 
 	// create the array of tests
 	tests := []Test{test}
-	err := r.repository.ChangeSchedule(r.ctx, tests)
+	err := r.repository.ChangeSchedule(ctx, tests)
 	r.Nil(err, "Cannot change schedule")
 
-	newTest, err := r.repository.GetTest(r.ctx, test.Id)
+	newTest, err := r.repository.GetTest(ctx, test.Id)
 	r.Nil(err, "Cannot retrieve rule")
 
 	r.Equal(newTest.EverySecond, test.EverySecond, "Update failed")
 }
 
 func (r *RepositoryOtherTestSuite) TestSetCronId() {
-	counter := 10
+	var counter int32 = 10
 	testsBefore := make([]Test, 0)
 	for _, test := range r.tests {
 		test.CronId = counter
@@ -115,10 +115,10 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 		testsBefore = append(testsBefore, test)
 	}
 
-	err := r.repository.SetCronId(r.tests)
+	err := r.repository.SetCronId(ctx, r.tests)
 	r.Nil(err, "Cannot set cron id of")
 
-	testsAfter, err := r.repository.GetAllTestsToExecute(r.ctx)
+	testsAfter, err := r.repository.GetAllTestsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 	flags := make([]bool, len(testsAfter))
 
@@ -150,7 +150,6 @@ type RepositoryTest interface {
 	Tests() []Test
 	Repository() *Repository2
 	TestSuite() *suite.Suite
-	Context() context.Context
 }
 
 func (r *RepositoryAddTestSuite) Tests() []Test {
@@ -177,18 +176,11 @@ func (r *RepositoryOtherTestSuite) TestSuite() *suite.Suite {
 	return &r.Suite
 }
 
-func (r *RepositoryAddTestSuite) Context() context.Context {
-	return r.ctx
-}
-
-func (r *RepositoryOtherTestSuite) Context() context.Context {
-	return r.ctx
-}
-
 func teardown2(t RepositoryTest, okError bool) {
-	err := t.Repository().DeleteTestsByKeys(t.Context(), GetIdsFromTestList(t.Tests()))
+	err := t.Repository().DeleteTestsByKeys(ctx, GetIdsFromTestList(t.Tests()))
 	if err != nil {
 		if !okError {
+			fmt.Printf("To delete: %d test\n", len(t.Tests()))
 			t.TestSuite().Nil(err, "Cannot delete tests")
 		}
 	}
@@ -197,8 +189,15 @@ func teardown2(t RepositoryTest, okError bool) {
 func setup(suite suite.Suite) (Repository2, []Test) {
 	ctx := context.Background()
 	repositoryOptions, err := PgRepositoryOptions()
+	suite.Nil(err, "Cannot get the correct config")
+	if err != nil {
+		suite.FailNow("Cannot go on.")
+	}
 	repository, err := NewRepository2(ctx, repositoryOptions)
 	suite.Nil(err, "Cannot connect to the database")
+	if err != nil {
+		suite.FailNow("Cannot go on.")
+	}
 	tests := []Test{
 		{
 			Id:                   2,

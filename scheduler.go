@@ -23,7 +23,7 @@ func (s *Scheduler) AddTests2(tests []TestWithSchedule) {
 	for _, test := range tests {
 		job := test.toRunFunctionInput()
 		entryID := s.cron.Schedule(test.Schedule, job)
-		test.CronId = int(entryID)
+		test.CronId = int32(int(entryID))
 	}
 }
 
@@ -59,7 +59,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 		for j, input := range inputs {
 			var entryID cron.EntryID
 			// add the entry to the scheduler
-			entryID, err = s.cron.AddFunc(getCronSchedule(rule.Tests[j].EverySecond), func() {
+			entryID, err = s.cron.AddFunc(getCronSchedule(int(rule.Tests[j].EverySecond)), func() {
 				input.Run()
 			})
 			// we can return without worrying about spurious element
@@ -71,7 +71,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 			// otherwise, append the entry to the list
 			collectedEntries = append(collectedEntries, entryID)
 			// and also, store it into the test
-			modifiedRules[i].Tests[j].CronId = int(entryID)
+			modifiedRules[i].Tests[j].CronId = int32(int(entryID))
 		}
 	}
 	return modifiedRules, nil
@@ -98,7 +98,7 @@ func (s *Scheduler) AddTests(tests []Test) ([]Test, error) {
 	for i, test := range tests {
 		input := test.toRunFunctionInput()
 		var entryID cron.EntryID
-		entryID, err = s.cron.AddFunc(getCronSchedule(test.EverySecond), func() {
+		entryID, err = s.cron.AddFunc(getCronSchedule(int(test.EverySecond)), func() {
 			input.Run()
 		})
 		if err != nil {
@@ -106,7 +106,7 @@ func (s *Scheduler) AddTests(tests []Test) ([]Test, error) {
 		}
 		// otherwise, append the entry id
 		collectedEntries = append(collectedEntries, entryID)
-		modifiedTests[i].CronId = int(entryID)
+		modifiedTests[i].CronId = int32(int(entryID))
 	}
 	return modifiedTests, err
 }
@@ -130,9 +130,9 @@ func getCronSchedule(seconds int) string {
 }
 
 type runFunctionInput struct {
-	testID               int
-	userEvaluationRuleId int
-	userID               int
+	testID               int32
+	userEvaluationRuleId int32
+	userID               int32
 }
 
 func (r *runFunctionInput) Run() {

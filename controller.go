@@ -167,8 +167,8 @@ func (s *SmallBen) UpdateSchedule(schedules []UpdateSchedule) error {
 	// now, we build a list of tests from the schedules
 	for _, schedule := range schedules {
 		for _, test := range tests {
-			if test.Id == schedule.TestId {
-				test.EverySecond = schedule.EverySecond
+			if test.Id == int32(schedule.TestId) {
+				test.EverySecond = int32(schedule.EverySecond)
 				break
 			}
 		}

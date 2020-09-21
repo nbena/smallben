@@ -18,14 +18,38 @@ type TestInfo interface {
 }
 
 type Test struct {
-	Id                   int `gorm:"primaryKey"`
-	UserId               int
-	CronId               int  `gorm:"default:0"`
-	EverySecond          int  `gorm:"check:every_second >= 60"`
-	Paused               bool `gorm:"default:false"`
+	Id                   int32 `gorm:"primaryKey"`
+	UserId               int32
+	CronId               int32 `gorm:"default:0"`
+	EverySecond          int32 `gorm:"check:every_second >= 60"`
+	Paused               bool  `gorm:"default:false"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	UserEvaluationRuleId uint `gorm:"column:user_evaluation_rule_id"`
+	UserEvaluationRuleId int32 `gorm:"column:user_evaluation_rule_id"`
+}
+
+func (t *Test) addToRaw() []interface{} {
+	return []interface{}{
+		t.Id,
+		t.UserEvaluationRuleId,
+		t.UserId,
+		t.Paused,
+		t.EverySecond,
+		time.Now(),
+		time.Now(),
+	}
+}
+
+func addToColumn() []string {
+	return []string{
+		"id",
+		"user_evaluation_rule_id",
+		"user_id",
+		"paused",
+		"every_second",
+		"created_at",
+		"updated_at",
+	}
 }
 
 type TestWithSchedule struct {
@@ -60,7 +84,7 @@ func (t *Test) ToTestWithSchedule() (TestWithSchedule, error) {
 func (t *Test) toRunFunctionInput() *runFunctionInput {
 	return &runFunctionInput{
 		testID:               t.Id,
-		userEvaluationRuleId: int(t.UserEvaluationRuleId),
+		userEvaluationRuleId: t.UserEvaluationRuleId,
 		userID:               t.UserId,
 	}
 }
@@ -82,8 +106,8 @@ func (u *UserEvaluationRule) toRunFunctionInput() []runFunctionInput {
 	for i, test := range u.Tests {
 		inputs[i] = runFunctionInput{
 			testID:               test.Id,
-			userID:               u.UserId,
-			userEvaluationRuleId: u.Id,
+			userID:               int32(u.UserId),
+			userEvaluationRuleId: int32(u.Id),
 		}
 	}
 	return inputs
@@ -109,8 +133,8 @@ func GetIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {
 }
 
 // GetIdsFromTestList basically does tests.map(test -> test.id)
-func GetIdsFromTestList(tests []Test) []int {
-	ids := make([]int, len(tests))
+func GetIdsFromTestList(tests []Test) []int32 {
+	ids := make([]int32, len(tests))
 	for i, test := range tests {
 		ids[i] = test.Id
 	}
