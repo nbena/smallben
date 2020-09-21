@@ -115,7 +115,7 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 		testsBefore = append(testsBefore, test)
 	}
 
-	err := r.repository.SetCronId(ctx, r.tests)
+	err := r.repository.SetCronId(ctx, testsBefore)
 	r.Nil(err, "Cannot set cron id of")
 
 	testsAfter, err := r.repository.GetAllTestsToExecute(ctx)
@@ -134,7 +134,6 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 	for i, flag := range flags {
 		r.Equal(flag, true, fmt.Sprintf("Not flagged: %v", testsBefore[i]))
 	}
-
 }
 
 func TestRepositoryTestSuite(t *testing.T) {
