@@ -16,11 +16,10 @@ func NewScheduler() Scheduler {
 	}
 }
 
-// AddUserEvaluationRules adds `rules' to the scheduler. It returns an error in case
-// the schedule is invalid.
-func (s *Scheduler) AddUserEvaluationRules(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
-	tests := FlatTests(rules)
-	modifiedRules := rules
+// AddTests2 adds `test` to the scheduler. It returns an error in case
+// the schedule is invalid, otherwise it never fails.
+// The returned tests contains the modified `cron_id.`.
+func (s *Scheduler) AddTests2(tests []Test) ([]Test, error) {
 
 	schedules := make([]cron.Schedule, len(tests))
 	jobs := make([]cron.Job, len(tests))
@@ -38,7 +37,7 @@ func (s *Scheduler) AddUserEvaluationRules(rules []UserEvaluationRule) ([]UserEv
 		entryID := s.cron.Schedule(schedules[i], jobs[i])
 		tests[i].CronId = int(entryID)
 	}
-	return modifiedRules, nil
+	return tests, nil
 }
 
 func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
