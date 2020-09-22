@@ -72,23 +72,27 @@ func (s *SmallBen) Fill(ctx context.Context) error {
 }
 
 // AddTests add `tests` to the scheduler, by saving also them to the database.
+// If the add operation on the database fails, then it is guaranteed that tests
+// will also be removed from the scheduler, leaving the state unchanged.
 func (s *SmallBen) AddTests(ctx context.Context, tests []Test) error {
 	// now, build the TestWithSchedule object
 	testsWithSchedule := make([]TestWithSchedule, len(tests))
 	for i, test := range tests {
+		// parse the given schedule
 		testWithSchedule, err := test.ToTestWithSchedule()
 		if err != nil {
 			return err
 		}
+		// if no errors, add to the array
 		testsWithSchedule[i] = testWithSchedule
 	}
 	// now, add them to the scheduler
 	s.scheduler.AddTests2(testsWithSchedule)
-	// now, update the db by updating the cron entries
-	err := s.repository.SetCronIdOfTestsWithSchedule(ctx, testsWithSchedule)
-	if err != nil {
-		// if there is an error, remove them from the scheduler
+	// and them, store them within the database
+	if err := s.repository.AddTests(ctx, testsWithSchedule); err != nil {
+		// in case of errors, also remove them from the scheduler
 		s.scheduler.DeleteTestsWithSchedule(testsWithSchedule)
+		return err
 	}
 	return nil
 }
@@ -108,6 +112,8 @@ func (s *SmallBen) DeleteTests(ctx context.Context, testsID []int32) error {
 		return err
 	}
 
+	// if here, the deletion from the database was fine
+	// so we can safely remove them from the scheduler.
 	s.scheduler.DeleteTests(tests)
 	return nil
 }
@@ -122,10 +128,12 @@ func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 		return err
 	}
 
-	// now update them
+	// now update them in the database
 	if err = s.repository.PauseTests(ctx, tests); err != nil {
 		return err
 	}
+	// if here, we have correctly paused them, so we can go on
+	// and safely delete them from the database.
 	s.scheduler.DeleteTests(tests)
 	return nil
 }
@@ -138,7 +146,7 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	if err != nil {
 		return err
 	}
-	// now, build the TestWithSchedule object
+	// now, build the schedule from the tests recovered from the database.
 	testsWithSchedule := make([]TestWithSchedule, len(tests))
 	for i, test := range tests {
 		testsWithSchedule[i], err = test.ToTestWithSchedule()
@@ -150,13 +158,14 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	if err = s.repository.ResumeTests(ctx, tests); err != nil {
 		return err
 	}
-	// and now update them in the scheduler
-	s.scheduler.DeleteTestsWithSchedule(testsWithSchedule)
+
+	// and now add them in the scheduler
 	s.scheduler.AddTests2(testsWithSchedule)
 
-	// now, update in the database by setting the cron id
+	// now, update the database by setting the cron id
 	if err = s.repository.SetCronIdOfTestsWithSchedule(ctx, testsWithSchedule); err != nil {
-		// remove from the scheduler also
+		// in case there have been errors, we clean up the scheduler too
+		// leaving the state unchanged.
 		s.scheduler.DeleteTests(tests)
 		return err
 	}
@@ -165,7 +174,8 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 
 // UpdateSchedule updates the scheduler internal state by changing the `scheduleInfo`
 // of the required tests.
-// It is guaranteed that the state does not change in case of any error.
+// In case of errors, it is guaranteed that, in the worst case, tests will be removed
+// from the scheduler will still being in the database with the old schedule.
 func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSchedule) error {
 	// first, we grab all the tests
 	tests, err := s.repository.GetTestsByKeys(ctx, GetIdsFromUpdateScheduleList(scheduleInfo))
