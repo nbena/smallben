@@ -45,7 +45,7 @@ func (s *SmallBen) Stop() {
 	<-ctx.Done()
 }
 
-// Retrieve all the Test to execute from the database using ctx.
+// Fill retrieves all the Test to execute from the database using ctx.
 func (s *SmallBen) Fill(ctx context.Context) error {
 	// get all the tests
 	tests, err := s.repository.GetAllTestsToExecute(ctx)
@@ -130,6 +130,7 @@ func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 	return nil
 }
 
+// ResumeTests restarts the Test whose ids are `testsID`.
 func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
