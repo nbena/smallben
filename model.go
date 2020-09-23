@@ -111,9 +111,9 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 
 func (t *Job) toRunFunctionInput() *runFunctionInput {
 	return &runFunctionInput{
-		testID:               t.Id,
-		userEvaluationRuleId: t.SuperGroupId,
-		userID:               t.UserId,
+		testID:       t.Id,
+		groupID:      t.SuperGroupId,
+		superGroupID: t.UserId,
 	}
 }
 

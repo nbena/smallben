@@ -23,7 +23,7 @@ func (s *Scheduler) AddTests2(tests []JobWithSchedule) {
 	for _, test := range tests {
 		job := test.toRunFunctionInput()
 		entryID := s.cron.Schedule(test.schedule, job)
-		test.CronId = int32(int(entryID))
+		test.CronId = int32(entryID)
 	}
 }
 
@@ -32,49 +32,6 @@ func (s *Scheduler) DeleteTestsWithSchedule(tests []JobWithSchedule) {
 	for _, test := range tests {
 		s.cron.Remove(cron.EntryID(test.CronId))
 	}
-}
-
-func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
-
-	var collectedEntries []cron.EntryID
-	var err error
-
-	modifiedRules := rules
-
-	defer func() {
-		// if there are errors, then remove
-		// any added entries
-		if err != nil {
-			for _, entry := range collectedEntries {
-				s.cron.Remove(entry)
-			}
-		}
-	}()
-
-	// for each rule
-	for i, rule := range rules {
-		// compute the list of inputs for the function
-		inputs := rule.toRunFunctionInput()
-		// for each of the possible input
-		for j, input := range inputs {
-			var entryID cron.EntryID
-			// add the entry to the scheduler
-			entryID, err = s.cron.AddFunc(getCronSchedule(int(rule.Tests[j].EverySecond)), func() {
-				input.Run()
-			})
-			// we can return without worrying about spurious element
-			// since we have the defer function removing any added element
-			// from the scheduler
-			if err != nil {
-				return nil, err
-			}
-			// otherwise, append the entry to the list
-			collectedEntries = append(collectedEntries, entryID)
-			// and also, store it into the test
-			modifiedRules[i].Tests[j].CronId = int32(int(entryID))
-		}
-	}
-	return modifiedRules, nil
 }
 
 func (s *Scheduler) AddTests(tests []Job) ([]Job, error) {
@@ -106,16 +63,9 @@ func (s *Scheduler) AddTests(tests []Job) ([]Job, error) {
 		}
 		// otherwise, append the entry id
 		collectedEntries = append(collectedEntries, entryID)
-		modifiedTests[i].CronId = int32(int(entryID))
+		modifiedTests[i].CronId = int32(entryID)
 	}
 	return modifiedTests, err
-}
-
-// DeleteUserEvaluationRules delete `rules` from the scheduler.
-func (s *Scheduler) DeleteUserEvaluationRules(rules []UserEvaluationRule) {
-	for _, rule := range rules {
-		s.DeleteTests(rule.Tests)
-	}
 }
 
 // DeleteTests remove `tests` from the scheduler.
@@ -130,9 +80,9 @@ func getCronSchedule(seconds int) string {
 }
 
 type runFunctionInput struct {
-	testID               int32
-	userEvaluationRuleId int32
-	userID               int32
+	jobID        int32
+	groupID      int32
+	superGroupID int32
 }
 
 func (r *runFunctionInput) Run() {
