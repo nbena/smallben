@@ -12,20 +12,20 @@ package smallben
 //
 //	s.availableUserEvaluationRules = []UserEvaluationRule{
 //		{
-//			Id:     1,
+//			ID:     1,
 //			UserId: 1,
 //			Tests: []Job{
 //				{
-//					Id:                   2,
+//					ID:                   2,
 //					EverySecond:          60,
 //					UserId:               1,
-//					SuperGroupId: 1,
+//					SuperGroupID: 1,
 //					Paused:               false,
 //				}, {
-//					Id:                   3,
+//					ID:                   3,
 //					EverySecond:          120,
 //					UserId:               1,
-//					SuperGroupId: 1,
+//					SuperGroupID: 1,
 //					Paused:               false,
 //				},
 //			},
@@ -46,7 +46,7 @@ package smallben
 //	// making sure all UserEvaluationRules have its own cron id
 //	for _, rule := range modifiedRules {
 //		for _, test := range rule.Tests {
-//			s.NotEqual(test.CronId, -1)
+//			s.NotEqual(test.CronID, -1)
 //		}
 //	}
 //

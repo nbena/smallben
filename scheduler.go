@@ -17,20 +17,20 @@ func NewScheduler() Scheduler {
 }
 
 // AddTests2 adds `test` to the scheduler. This function never fails and updates
-// the input array with the `CronId`.
+// the input array with the `CronID`.
 func (s *Scheduler) AddTests2(tests []JobWithSchedule) {
 
 	for _, test := range tests {
 		job := test.toRunFunctionInput()
 		entryID := s.cron.Schedule(test.schedule, job)
-		test.CronId = int32(entryID)
+		test.CronID = int32(entryID)
 	}
 }
 
 // DeleteTestsWithSchedule remove `tests` from the scheduler. This function never fails.
 func (s *Scheduler) DeleteTestsWithSchedule(tests []JobWithSchedule) {
 	for _, test := range tests {
-		s.cron.Remove(cron.EntryID(test.CronId))
+		s.cron.Remove(cron.EntryID(test.CronID))
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *Scheduler) AddTests(tests []Job) ([]Job, error) {
 		}
 		// otherwise, append the entry id
 		collectedEntries = append(collectedEntries, entryID)
-		modifiedTests[i].CronId = int32(entryID)
+		modifiedTests[i].CronID = int32(entryID)
 	}
 	return modifiedTests, err
 }
@@ -71,7 +71,7 @@ func (s *Scheduler) AddTests(tests []Job) ([]Job, error) {
 // DeleteTests remove `tests` from the scheduler.
 func (s *Scheduler) DeleteTests(tests []Job) {
 	for _, test := range tests {
-		s.cron.Remove(cron.EntryID(test.CronId))
+		s.cron.Remove(cron.EntryID(test.CronID))
 	}
 }
 

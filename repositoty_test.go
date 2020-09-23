@@ -28,7 +28,7 @@ func (r *RepositoryAddTestSuite) TestAdd() {
 	r.Nil(err, "Cannot add tests")
 
 	// now performs a select making sure the adding is ok
-	result, err := r.repository.GetAllTestsToExecute(ctx)
+	result, err := r.repository.GetAllJobsToExecute(ctx)
 	r.Nil(err, "Cannot get rules")
 	r.Equal(len(result), len(r.tests), "Len mismatch")
 }
@@ -62,12 +62,12 @@ func (r *RepositoryOtherTestSuite) TearDownTest() {
 }
 
 func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
-	_, err := r.repository.GetJob(ctx, r.tests[0].Id)
+	_, err := r.repository.GetJob(ctx, r.tests[0].ID)
 	r.Nil(err, "Cannot retrieve single test")
 }
 
 func (r *RepositoryOtherTestSuite) TestDelete() {
-	err := r.repository.DeleteTestsByKeys(ctx, GetIdsFromJobsList(r.tests))
+	err := r.repository.DeleteJobsByIds(ctx, GetIdsFromJobsList(r.tests))
 	r.Nil(err, "Cannot delete tests")
 	r.okDeleteError = true
 }
@@ -77,7 +77,7 @@ func (r *RepositoryOtherTestSuite) TestPause() {
 	r.Nil(err, "Cannot pause tests")
 
 	// now we retrieve them
-	tests, err := r.repository.GetAllTestsToExecute(ctx)
+	tests, err := r.repository.GetAllJobsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 	r.NotContains(GetIdsFromJobsList(r.tests), GetIdsFromJobsList(tests), "Contains failed")
 }
@@ -89,7 +89,7 @@ func (r *RepositoryOtherTestSuite) TestResume() {
 	err = r.repository.ResumeJobs(ctx, r.tests)
 	r.Nil(err, "Cannot resume tests")
 
-	tests, err := r.repository.GetAllTestsToExecute(ctx)
+	tests, err := r.repository.GetAllJobsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 
 	r.Equal(len(r.tests), len(tests), "Len mismatch")
@@ -107,7 +107,7 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 	err := r.repository.SetCronIdAndChangeSchedule(ctx, tests)
 	r.Nil(err, "Cannot change schedule")
 
-	newTest, err := r.repository.GetJob(ctx, test.Id)
+	newTest, err := r.repository.GetJob(ctx, test.ID)
 	r.Nil(err, "Cannot retrieve rule")
 
 	r.Equal(newTest.EverySecond, test.EverySecond, "Update failed")
@@ -117,7 +117,7 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 	var counter int32 = 10
 	testsBefore := make([]Job, 0)
 	for _, test := range r.tests {
-		test.CronId = counter
+		test.CronID = counter
 		counter += 1
 		testsBefore = append(testsBefore, test)
 	}
@@ -129,17 +129,17 @@ func (r *RepositoryOtherTestSuite) TestSetCronId() {
 		}
 	}
 
-	err := r.repository.SetCronIdOfTestsWithSchedule(ctx, schedules)
+	err := r.repository.SetCronIdOfJobsWithSchedule(ctx, schedules)
 	r.Nil(err, "Cannot set cron id of")
 
-	testsAfter, err := r.repository.GetAllTestsToExecute(ctx)
+	testsAfter, err := r.repository.GetAllJobsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
 	flags := make([]bool, len(testsAfter))
 
 	for i, testBefore := range testsBefore {
 		for _, testAfter := range testsAfter {
-			if testBefore.Id == testAfter.Id {
-				r.Equal(testBefore.CronId, testAfter.CronId, "CronId failed")
+			if testBefore.ID == testAfter.ID {
+				r.Equal(testBefore.CronID, testAfter.CronID, "CronID failed")
 				flags[i] = true
 				break
 			}
@@ -190,7 +190,7 @@ func (r *RepositoryOtherTestSuite) TestSuite() *suite.Suite {
 }
 
 func teardown2(t RepositoryTest, okError bool) {
-	err := t.Repository().DeleteTestsByKeys(ctx, GetIdsFromJobsList(t.Tests()))
+	err := t.Repository().DeleteJobsByIds(ctx, GetIdsFromJobsList(t.Tests()))
 	if err != nil {
 		if !okError {
 			fmt.Printf("To delete: %d test\n", len(t.Tests()))
@@ -213,16 +213,16 @@ func setup(suite suite.Suite) (Repository2, []Job) {
 	}
 	tests := []Job{
 		{
-			Id:           2,
+			ID:           2,
 			EverySecond:  60,
 			UserId:       1,
-			SuperGroupId: 1,
+			SuperGroupID: 1,
 			Paused:       false,
 		}, {
-			Id:           3,
+			ID:           3,
 			EverySecond:  120,
 			UserId:       1,
-			SuperGroupId: 1,
+			SuperGroupID: 1,
 			Paused:       false,
 		},
 	}

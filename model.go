@@ -21,17 +21,17 @@ type TestInfo interface {
 // Job is the struct used to interact with the
 // persistent scheduler.
 type Job struct {
-	// Id is a unique ID identifying the job object.
+	// ID is a unique ID identifying the job object.
 	// It is chosen by the user.
-	Id int32
-	// GroupId is the ID of the group this job is inserted in.
-	GroupId int32
-	// SuperGroupId specifies the ID of the super group
+	ID int32
+	// GroupID is the ID of the group this job is inserted in.
+	GroupID int32
+	// SuperGroupID specifies the ID of the super group
 	// where this group is contained in.
-	SuperGroupId int32
-	// CronId is the ID of the cron job as assigned by the scheduler
+	SuperGroupID int32
+	// CronID is the ID of the cron job as assigned by the scheduler
 	// internally.
-	CronId int32
+	CronID int32
 	// EverySecond specifies every how many seconds the job will run.
 	EverySecond int32
 	// Paused specifies whether this job has been paused.
@@ -45,10 +45,10 @@ type Job struct {
 
 func (t *Job) addToRaw() []interface{} {
 	return []interface{}{
-		t.Id,
-		t.GroupId,
-		t.SuperGroupId,
-		t.CronId,
+		t.ID,
+		t.GroupID,
+		t.SuperGroupID,
+		t.CronID,
 		t.Paused,
 		t.EverySecond,
 		time.Now(),
@@ -95,10 +95,10 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	}
 	result = JobWithSchedule{
 		Job: Job{
-			Id:           t.Id,
-			GroupId:      t.GroupId,
-			SuperGroupId: t.SuperGroupId,
-			CronId:       t.CronId,
+			ID:           t.ID,
+			GroupID:      t.GroupID,
+			SuperGroupID: t.SuperGroupID,
+			CronID:       t.CronID,
 			EverySecond:  t.EverySecond,
 			Paused:       t.Paused,
 			CreatedAt:    t.CreatedAt,
@@ -111,9 +111,9 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 
 func (t *Job) toRunFunctionInput() *runFunctionInput {
 	return &runFunctionInput{
-		jobID:        t.Id,
-		groupID:      t.GroupId,
-		superGroupID: t.SuperGroupId,
+		jobID:        t.ID,
+		groupID:      t.GroupID,
+		superGroupID: t.SuperGroupID,
 	}
 }
 
@@ -125,7 +125,7 @@ func (t *Job) schedule() (cron.Schedule, error) {
 func GetIdsFromJobsList(tests []Job) []int32 {
 	ids := make([]int32, len(tests))
 	for i, test := range tests {
-		ids[i] = test.Id
+		ids[i] = test.ID
 	}
 	return ids
 }

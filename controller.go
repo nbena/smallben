@@ -48,7 +48,7 @@ func (s *SmallBen) Stop() {
 // Fill retrieves all the Job to execute from the database using ctx.
 func (s *SmallBen) Fill(ctx context.Context) error {
 	// get all the tests
-	tests, err := s.repository.GetAllTestsToExecute(ctx)
+	tests, err := s.repository.GetAllJobsToExecute(ctx)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *SmallBen) Fill(ctx context.Context) error {
 	// now, add them to the scheduler
 	s.scheduler.AddTests2(testsWithSchedule)
 	// now, update the db by updating the cron entries
-	err = s.repository.SetCronIdOfTestsWithSchedule(ctx, testsWithSchedule)
+	err = s.repository.SetCronIdOfJobsWithSchedule(ctx, testsWithSchedule)
 	if err != nil {
 		// if there is an error, remove them from the scheduler
 		s.scheduler.DeleteTestsWithSchedule(testsWithSchedule)
@@ -102,13 +102,13 @@ func (s *SmallBen) AddTests(ctx context.Context, tests []Job) error {
 func (s *SmallBen) DeleteTests(ctx context.Context, testsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
-	tests, err := s.repository.GetTestsByKeys(ctx, testsID)
+	tests, err := s.repository.GetJobsByIds(ctx, testsID)
 	if err != nil {
 		return err
 	}
 
 	// now delete them
-	if err = s.repository.DeleteTestsByKeys(ctx, testsID); err != nil {
+	if err = s.repository.DeleteJobsByIds(ctx, testsID); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (s *SmallBen) DeleteTests(ctx context.Context, testsID []int32) error {
 func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
-	tests, err := s.repository.GetTestsByKeys(ctx, testsID)
+	tests, err := s.repository.GetJobsByIds(ctx, testsID)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
-	tests, err := s.repository.GetTestsByKeys(ctx, testsID)
+	tests, err := s.repository.GetJobsByIds(ctx, testsID)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	s.scheduler.AddTests2(testsWithSchedule)
 
 	// now, update the database by setting the cron id
-	if err = s.repository.SetCronIdOfTestsWithSchedule(ctx, testsWithSchedule); err != nil {
+	if err = s.repository.SetCronIdOfJobsWithSchedule(ctx, testsWithSchedule); err != nil {
 		// in case there have been errors, we clean up the scheduler too
 		// leaving the state unchanged.
 		s.scheduler.DeleteTests(tests)
@@ -178,7 +178,7 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 // from the scheduler will still being in the database with the old schedule.
 func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSchedule) error {
 	// first, we grab all the tests
-	tests, err := s.repository.GetTestsByKeys(ctx, GetIdsFromUpdateScheduleList(scheduleInfo))
+	tests, err := s.repository.GetJobsByIds(ctx, GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
 		return err
 	}
