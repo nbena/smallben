@@ -44,20 +44,21 @@ func (r *Repository2) AddTests(ctx context.Context, tests []JobWithSchedule) err
 	return nil
 }
 
-// GetTest returns a JobWithSchedule whose id is `testID`.
-func (r *Repository2) GetTest(ctx context.Context, testID int32) (JobWithSchedule, error) {
-	var tests []Job
-	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
-paused, created_at, updated_at, user_evaluation_rule_id from tests where id=$1`, testID)
+// GetJob returns a JobWithSchedule whose id is `jobID`.
+// It returns an already converted JobWithSchedule.
+func (r *Repository2) GetJob(ctx context.Context, jobID int32) (JobWithSchedule, error) {
+	var jobs []Job
+	err := pgxscan.Select(ctx, &r.pool, &jobs, `select id, group_id, super_group_id, cron_id,
+every_second, paused, created_at, updated_at from jobs where id=$1`, jobID)
 	if err != nil {
 		return JobWithSchedule{}, err
 	}
-	if len(tests) == 0 {
+	if len(jobs) == 0 {
 		return JobWithSchedule{}, pgx.ErrNoRows
 	}
-	test := tests[0]
-	testWithSchedule, err := (&test).ToJobWithSchedule()
-	return testWithSchedule, err
+	job := jobs[0]
+	jobWithSchedule, err := (&job).ToJobWithSchedule()
+	return jobWithSchedule, err
 }
 
 // PauseTests pauses `tests`, i.e., changing the `paused` field to `true`.
@@ -83,8 +84,8 @@ func (r *Repository2) ResumeTests(ctx context.Context, tests []Job) error {
 // GetAllTestsToExecute returns all the test whose `paused` field is set to `false`.
 func (r *Repository2) GetAllTestsToExecute(ctx context.Context) ([]Job, error) {
 	var tests []Job
-	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
-paused, created_at, updated_at, user_evaluation_rule_id from tests where paused = false`)
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, group_id, super_group_id, cron_id,
+every_second, paused, created_at, updated_at from jobs where paused = false`)
 	return tests, err
 }
 
@@ -93,8 +94,8 @@ paused, created_at, updated_at, user_evaluation_rule_id from tests where paused 
 // tests and of the input.
 func (r *Repository2) GetTestsByKeys(ctx context.Context, testsID []int32) ([]Job, error) {
 	var tests []Job
-	err := pgxscan.Select(ctx, &r.pool, &tests, `select select id, user_id, cron_id, every_second,
-paused, created_at, updated_at, user_evaluation_rule_id from tests where id = any($1)`, testsID)
+	err := pgxscan.Select(ctx, &r.pool, &tests, `select select id, group_id, super_group_id, cron_id,
+every_second, paused, created_at, updated_at from jobs where id = any($1)`, testsID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ paused, created_at, updated_at, user_evaluation_rule_id from tests where id = an
 
 // DeleteTestsByKeys deletes the tests whose id are in `testsID`.
 func (r *Repository2) DeleteTestsByKeys(ctx context.Context, testsID []int32) error {
-	_, err := r.pool.Exec(ctx, "delete from tests where id = any($1)", testsID)
+	_, err := r.pool.Exec(ctx, "delete from jobs where id = any($1)", testsID)
 	if err != nil {
 		return err
 	}

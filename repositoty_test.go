@@ -62,7 +62,7 @@ func (r *RepositoryOtherTestSuite) TearDownTest() {
 }
 
 func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
-	_, err := r.repository.GetTest(ctx, r.tests[0].Id)
+	_, err := r.repository.GetJob(ctx, r.tests[0].Id)
 	r.Nil(err, "Cannot retrieve single test")
 }
 
@@ -107,7 +107,7 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 	err := r.repository.SetCronIdAndChangeSchedule(ctx, tests)
 	r.Nil(err, "Cannot change schedule")
 
-	newTest, err := r.repository.GetTest(ctx, test.Id)
+	newTest, err := r.repository.GetJob(ctx, test.Id)
 	r.Nil(err, "Cannot retrieve rule")
 
 	r.Equal(newTest.EverySecond, test.EverySecond, "Update failed")

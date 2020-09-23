@@ -26,6 +26,9 @@ type Job struct {
 	Id int32
 	// GroupId is the ID of the group this job is inserted in.
 	GroupId int32
+	// SuperGroupId specifies the ID of the super group
+	// where this group is contained in.
+	SuperGroupId int32
 	// CronId is the ID of the cron job as assigned by the scheduler
 	// internally.
 	CronId int32
@@ -38,9 +41,6 @@ type Job struct {
 	// UpdatedAt specifies the last time this object has been updated,
 	// i.e., paused/resumed/schedule updated.
 	UpdatedAt time.Time
-	// SuperGroupId specifies the ID of the super group
-	// where this group is contained in.
-	SuperGroupId int32
 }
 
 func (t *Job) addToRaw() []interface{} {
