@@ -213,17 +213,17 @@ func setup(suite suite.Suite) (Repository2, []Job) {
 	}
 	tests := []Job{
 		{
-			Id:                   2,
-			EverySecond:          60,
-			UserId:               1,
-			UserEvaluationRuleId: 1,
-			Paused:               false,
+			Id:           2,
+			EverySecond:  60,
+			UserId:       1,
+			SuperGroupId: 1,
+			Paused:       false,
 		}, {
-			Id:                   3,
-			EverySecond:          120,
-			UserId:               1,
-			UserEvaluationRuleId: 1,
-			Paused:               false,
+			Id:           3,
+			EverySecond:  120,
+			UserId:       1,
+			SuperGroupId: 1,
+			Paused:       false,
 		},
 	}
 	return repository, tests

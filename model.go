@@ -18,22 +18,36 @@ type TestInfo interface {
 	UserEvaluationRuleId() int
 }
 
+// Job is the struct used to interact with the
+// persistent scheduler.
 type Job struct {
-	Id                   int32
-	UserId               int32
-	CronId               int32
-	EverySecond          int32
-	Paused               bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-	UserEvaluationRuleId int32
+	// Id is a unique ID identifying the job object.
+	// It is chosen by the user.
+	Id int32
+	// GroupId is the ID of the group this job is inserted in.
+	GroupId int32
+	// CronId is the ID of the cron job as assigned by the scheduler
+	// internally.
+	CronId int32
+	// EverySecond specifies every how many seconds the job will run.
+	EverySecond int32
+	// Paused specifies whether this job has been paused.
+	Paused bool
+	// CreatedAt specifies when this job has been created.
+	CreatedAt time.Time
+	// UpdatedAt specifies the last time this object has been updated,
+	// i.e., paused/resumed/schedule updated.
+	UpdatedAt time.Time
+	// SuperGroupId specifies the ID of the super group
+	// where this group is contained in.
+	SuperGroupId int32
 }
 
 func (t *Job) addToRaw() []interface{} {
 	return []interface{}{
 		t.Id,
-		t.UserEvaluationRuleId,
-		t.UserId,
+		t.GroupId,
+		t.SuperGroupId,
 		t.CronId,
 		t.Paused,
 		t.EverySecond,
@@ -45,8 +59,8 @@ func (t *Job) addToRaw() []interface{} {
 func addToColumn() []string {
 	return []string{
 		"id",
-		"user_evaluation_rule_id",
-		"user_id",
+		"group_id",
+		"super_group_id",
 		"cron_id",
 		"paused",
 		"every_second",
@@ -55,9 +69,20 @@ func addToColumn() []string {
 	}
 }
 
+// JobWithSchedule is a job object
+// with a cron.Schedule object in it.
+// The schedule can be accessed by using the Schedule()
+// method.
+// This object should be created only by calling the method
+// ToJobWithSchedule().
 type JobWithSchedule struct {
 	Job
-	Schedule cron.Schedule
+	schedule cron.Schedule
+}
+
+// Schedule returns the schedule used by this object.
+func (j *JobWithSchedule) Schedule() *cron.Schedule {
+	return &j.schedule
 }
 
 // ToJobWithSchedule returns a JobWithSchedule object from the current Job,
@@ -70,16 +95,16 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	}
 	result = JobWithSchedule{
 		Job: Job{
-			Id:                   t.UserId,
-			UserId:               t.UserId,
-			CronId:               t.CronId,
-			EverySecond:          t.EverySecond,
-			Paused:               t.Paused,
-			CreatedAt:            t.CreatedAt,
-			UpdatedAt:            t.UpdatedAt,
-			UserEvaluationRuleId: t.UserEvaluationRuleId,
+			Id:           t.Id,
+			GroupId:      t.GroupId,
+			SuperGroupId: t.SuperGroupId,
+			CronId:       t.CronId,
+			EverySecond:  t.EverySecond,
+			Paused:       t.Paused,
+			CreatedAt:    t.CreatedAt,
+			UpdatedAt:    t.UpdatedAt,
 		},
-		Schedule: schedule,
+		schedule: schedule,
 	}
 	return result, nil
 }
@@ -87,7 +112,7 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 func (t *Job) toRunFunctionInput() *runFunctionInput {
 	return &runFunctionInput{
 		testID:               t.Id,
-		userEvaluationRuleId: t.UserEvaluationRuleId,
+		userEvaluationRuleId: t.SuperGroupId,
 		userID:               t.UserId,
 	}
 }

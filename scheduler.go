@@ -22,7 +22,7 @@ func (s *Scheduler) AddTests2(tests []JobWithSchedule) {
 
 	for _, test := range tests {
 		job := test.toRunFunctionInput()
-		entryID := s.cron.Schedule(test.Schedule, job)
+		entryID := s.cron.Schedule(test.schedule, job)
 		test.CronId = int32(int(entryID))
 	}
 }
