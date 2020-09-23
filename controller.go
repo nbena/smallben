@@ -215,7 +215,8 @@ func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSche
 
 	// now, we remove the tests from scheduler
 	// it is safe to remove tests from the scheduler even if they
-	// are not in the scheduler
+	// are not in the scheduler.
+	// It is ok to delete tests even if they are not in the scheduler.
 	s.scheduler.DeleteTestsWithSchedule(testsWithScheduleNew)
 
 	// now, we (re-)add them to the scheduler
@@ -226,8 +227,7 @@ func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSche
 	if err = s.repository.SetCronIdAndChangeSchedule(ctx, testsWithScheduleNew); err != nil {
 		// in this case, we remove them from the scheduler
 		s.scheduler.DeleteTestsWithSchedule(testsWithScheduleNew)
-		// and we add the old ones
-		s.scheduler.AddTests2(testsWithScheduleOld)
+		return err
 	}
 	return nil
 }
