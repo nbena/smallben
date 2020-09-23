@@ -18,7 +18,7 @@ type TestInfo interface {
 	UserEvaluationRuleId() int
 }
 
-type Test struct {
+type Job struct {
 	Id                   int32
 	UserId               int32
 	CronId               int32
@@ -29,7 +29,7 @@ type Test struct {
 	UserEvaluationRuleId int32
 }
 
-func (t *Test) addToRaw() []interface{} {
+func (t *Job) addToRaw() []interface{} {
 	return []interface{}{
 		t.Id,
 		t.UserEvaluationRuleId,
@@ -55,21 +55,21 @@ func addToColumn() []string {
 	}
 }
 
-type TestWithSchedule struct {
-	Test
+type JobWithSchedule struct {
+	Job
 	Schedule cron.Schedule
 }
 
-// ToTestWithSchedule returns a TestWithSchedule object from the current Test,
+// ToJobWithSchedule returns a JobWithSchedule object from the current Job,
 // by copy. It returns errors in case the given schedule is not valid.
-func (t *Test) ToTestWithSchedule() (TestWithSchedule, error) {
-	var result TestWithSchedule
+func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
+	var result JobWithSchedule
 	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", t.EverySecond))
 	if err != nil {
 		return result, err
 	}
-	result = TestWithSchedule{
-		Test: Test{
+	result = JobWithSchedule{
+		Job: Job{
 			Id:                   t.UserId,
 			UserId:               t.UserId,
 			CronId:               t.CronId,
@@ -84,7 +84,7 @@ func (t *Test) ToTestWithSchedule() (TestWithSchedule, error) {
 	return result, nil
 }
 
-func (t *Test) toRunFunctionInput() *runFunctionInput {
+func (t *Job) toRunFunctionInput() *runFunctionInput {
 	return &runFunctionInput{
 		testID:               t.Id,
 		userEvaluationRuleId: t.UserEvaluationRuleId,
@@ -92,51 +92,12 @@ func (t *Test) toRunFunctionInput() *runFunctionInput {
 	}
 }
 
-func (t *Test) schedule() (cron.Schedule, error) {
+func (t *Job) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
 }
 
-type UserEvaluationRule struct {
-	Id        int `gorm:"primaryKey"`
-	UserId    int
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Tests     []Test
-}
-
-func (u *UserEvaluationRule) toRunFunctionInput() []runFunctionInput {
-	inputs := make([]runFunctionInput, len(u.Tests))
-	for i, test := range u.Tests {
-		inputs[i] = runFunctionInput{
-			testID:               test.Id,
-			userID:               int32(u.UserId),
-			userEvaluationRuleId: int32(u.Id),
-		}
-	}
-	return inputs
-}
-
-// FlatTests returns a flattened list of Test contained in `rules`, i.e.,
-// rules.map(rule -> rule.tests).flatten().
-func FlatTests(rules []UserEvaluationRule) []Test {
-	var tests []Test
-	for _, rule := range rules {
-		tests = append(tests, rule.Tests...)
-	}
-	return tests
-}
-
-// GetIdsFromUserEvaluationRuleList basically does rules.map(rule -> rule.id)
-func GetIdsFromUserEvaluationRuleList(rules []UserEvaluationRule) []int {
-	ids := make([]int, len(rules))
-	for i, rule := range rules {
-		ids[i] = rule.Id
-	}
-	return ids
-}
-
 // GetIdsFromTestList basically does tests.map(test -> test.id)
-func GetIdsFromTestList(tests []Test) []int32 {
+func GetIdsFromTestList(tests []Job) []int32 {
 	ids := make([]int32, len(tests))
 	for i, test := range tests {
 		ids[i] = test.Id

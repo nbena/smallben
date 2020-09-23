@@ -1,10 +1,10 @@
-create table if not exists tests (
+create table if not exists jobs (
     -- the test rule id
     id integer primary key,
-    -- the id of the owning user evaluation rule
-    user_evaluation_rule_id integer not null,
-    -- the user_id owning this test
-    user_id integer not null,
+    -- the id of the group owning this job
+    group_id integer not null,
+    -- the id of the supergroup owning this group of job
+    super_group_id integer not null,
     -- set to true if you want to pause this test
     paused boolean not null default false,
     -- with an integer we can support intervals
@@ -16,12 +16,12 @@ create table if not exists tests (
     created_at timestamp with time zone not null default current_timestamp,
     -- when the item has been updated last time
     updated_at timestamp  with time zone not null default current_timestamp,
-    unique(id, user_evaluation_rule_id, user_id)
+    unique(id, group_id, super_group_id)
 );
 
 -- index on the paused field
 create index if not exists paused_idx on tests(paused);
--- index on the user evaluation rule id
-create index if not exists user_evaluation_rule_idx on tests(user_evaluation_rule_id);
--- index on the user id
-create index if not exists user_id_idx on tests(user_id);
+-- index on the group id
+create index if not exists group_idx on tests(group_id);
+-- index on the super group id
+create index if not exists super_group_idx on tests(super_group_id);

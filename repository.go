@@ -28,7 +28,7 @@ func NewRepository2(ctx context.Context, options *pgxpool.Config) (Repository2, 
 
 // AddTests add `tests` within to the database. The update is done by using a batch
 // in a transaction.
-func (r *Repository2) AddTests(ctx context.Context, tests []TestWithSchedule) error {
+func (r *Repository2) AddTests(ctx context.Context, tests []JobWithSchedule) error {
 	rows := make([][]interface{}, len(tests))
 	for i, test := range tests {
 		rows[i] = test.addToRaw()
@@ -44,24 +44,24 @@ func (r *Repository2) AddTests(ctx context.Context, tests []TestWithSchedule) er
 	return nil
 }
 
-// GetTest returns a TestWithSchedule whose id is `testID`.
-func (r *Repository2) GetTest(ctx context.Context, testID int32) (TestWithSchedule, error) {
-	var tests []Test
+// GetTest returns a JobWithSchedule whose id is `testID`.
+func (r *Repository2) GetTest(ctx context.Context, testID int32) (JobWithSchedule, error) {
+	var tests []Job
 	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
 paused, created_at, updated_at, user_evaluation_rule_id from tests where id=$1`, testID)
 	if err != nil {
-		return TestWithSchedule{}, err
+		return JobWithSchedule{}, err
 	}
 	if len(tests) == 0 {
-		return TestWithSchedule{}, pgx.ErrNoRows
+		return JobWithSchedule{}, pgx.ErrNoRows
 	}
 	test := tests[0]
-	testWithSchedule, err := (&test).ToTestWithSchedule()
+	testWithSchedule, err := (&test).ToJobWithSchedule()
 	return testWithSchedule, err
 }
 
 // PauseTests pauses `tests`, i.e., changing the `paused` field to `true`.
-func (r *Repository2) PauseTests(ctx context.Context, tests []Test) error {
+func (r *Repository2) PauseTests(ctx context.Context, tests []Job) error {
 	ids := GetIdsFromTestList(tests)
 	_, err := r.pool.Exec(ctx, `update tests set paused = true where id = any($1)`, ids)
 	if err != nil {
@@ -71,7 +71,7 @@ func (r *Repository2) PauseTests(ctx context.Context, tests []Test) error {
 }
 
 // ResumeTests resumes `tests`, i.e., changing the `paused` field to `false`.
-func (r *Repository2) ResumeTests(ctx context.Context, tests []Test) error {
+func (r *Repository2) ResumeTests(ctx context.Context, tests []Job) error {
 	ids := GetIdsFromTestList(tests)
 	_, err := r.pool.Exec(ctx, `update tests set paused = false where id = any($1)`, ids)
 	if err != nil {
@@ -81,8 +81,8 @@ func (r *Repository2) ResumeTests(ctx context.Context, tests []Test) error {
 }
 
 // GetAllTestsToExecute returns all the test whose `paused` field is set to `false`.
-func (r *Repository2) GetAllTestsToExecute(ctx context.Context) ([]Test, error) {
-	var tests []Test
+func (r *Repository2) GetAllTestsToExecute(ctx context.Context) ([]Job, error) {
+	var tests []Job
 	err := pgxscan.Select(ctx, &r.pool, &tests, `select id, user_id, cron_id, every_second,
 paused, created_at, updated_at, user_evaluation_rule_id from tests where paused = false`)
 	return tests, err
@@ -91,8 +91,8 @@ paused, created_at, updated_at, user_evaluation_rule_id from tests where paused 
 // GetTestsByKeys returns all the tests whose primary key are in `testsID`. It returns an
 // error of type `pgx.ErrNoRow` in case there is a mismatch between the length of the returned
 // tests and of the input.
-func (r *Repository2) GetTestsByKeys(ctx context.Context, testsID []int32) ([]Test, error) {
-	var tests []Test
+func (r *Repository2) GetTestsByKeys(ctx context.Context, testsID []int32) ([]Job, error) {
+	var tests []Job
 	err := pgxscan.Select(ctx, &r.pool, &tests, `select select id, user_id, cron_id, every_second,
 paused, created_at, updated_at, user_evaluation_rule_id from tests where id = any($1)`, testsID)
 	if err != nil {
@@ -115,11 +115,11 @@ func (r *Repository2) DeleteTestsByKeys(ctx context.Context, testsID []int32) er
 
 //// ChangeSchedule update `tests` by saving in the database the new schedule.
 //// Execution is done within a transaction.
-//func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Test) error {
+//func (r *Repository2) ChangeSchedule(ctx context.Context, tests []Job) error {
 //	return r.transactionUpdate(
 //		ctx,
 //		tests,
-//		func(test *Test, batch *pgx.Batch) {
+//		func(test *Job, batch *pgx.Batch) {
 //			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
 //				test.Id, test.EverySecond, time.Now())
 //		})
@@ -127,30 +127,30 @@ func (r *Repository2) DeleteTestsByKeys(ctx context.Context, testsID []int32) er
 
 //// ChangeScheduleOfTestsWithSchedule update `tests` by saving in the database the new schedule.
 //// Execution is done within a transaction.
-//func (r *Repository2) ChangeScheduleOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
-//	rawTests := make([]Test, len(tests))
+//func (r *Repository2) ChangeScheduleOfTestsWithSchedule(ctx context.Context, tests []JobWithSchedule) error {
+//	rawTests := make([]Job, len(tests))
 //	for i, test := range tests {
-//		rawTests[i] = test.Test
+//		rawTests[i] = test.Job
 //	}
 //	return r.transactionUpdate(
 //		ctx,
 //		rawTests,
-//		func(test *Test, batch *pgx.Batch) {
+//		func(test *Job, batch *pgx.Batch) {
 //			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
 //				test.Id, test.EverySecond, time.Now())
 //		})
 //}
 
 // SetCronIdOfTestsWithSchedule updates `tests` by updating the `cron_id` field.
-func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []TestWithSchedule) error {
-	rawTests := make([]Test, len(tests))
+func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []JobWithSchedule) error {
+	rawTests := make([]Job, len(tests))
 	for i, test := range tests {
-		rawTests[i] = test.Test
+		rawTests[i] = test.Job
 	}
 	return r.transactionUpdate(
 		ctx,
 		rawTests,
-		func(test *Test, batch *pgx.Batch) {
+		func(test *Job, batch *pgx.Batch) {
 			batch.Queue("update tests set cron_id = $2, updated_at = $3 where id = $1",
 				test.Id, test.CronId, time.Now())
 		},
@@ -158,22 +158,22 @@ func (r *Repository2) SetCronIdOfTestsWithSchedule(ctx context.Context, tests []
 }
 
 // SetCronIdAndChangeSchedule updates the `cron_id` and the `every_second` field.
-func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, tests []TestWithSchedule) error {
-	rawTests := make([]Test, len(tests))
+func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, tests []JobWithSchedule) error {
+	rawTests := make([]Job, len(tests))
 	for i, test := range tests {
-		rawTests[i] = test.Test
+		rawTests[i] = test.Job
 	}
 	return r.transactionUpdate(
 		ctx,
 		rawTests,
-		func(test *Test, batch *pgx.Batch) {
+		func(test *Job, batch *pgx.Batch) {
 			batch.Queue("update tests set cron_id = $2, every_second = $3 updated_at = $4 where id = $1",
 				test.Id, test.CronId, test.EverySecond, time.Now())
 		},
 	)
 }
 
-func (r *Repository2) transactionUpdate(ctx context.Context, tests []Test, getBatchFn func(test *Test, batch *pgx.Batch)) error {
+func (r *Repository2) transactionUpdate(ctx context.Context, tests []Job, getBatchFn func(test *Job, batch *pgx.Batch)) error {
 	// create the batch of requests
 	var batch pgx.Batch
 	var result pgx.BatchResults

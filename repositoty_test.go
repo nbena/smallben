@@ -12,7 +12,7 @@ var ctx = context.Background()
 type RepositoryAddTestSuite struct {
 	suite.Suite
 	repository Repository2
-	tests      []Test
+	tests      []Job
 }
 
 func (r *RepositoryAddTestSuite) SetupTest() {
@@ -40,7 +40,7 @@ func (r *RepositoryAddTestSuite) TearDownTest() {
 type RepositoryOtherTestSuite struct {
 	suite.Suite
 	repository    Repository2
-	tests         []Test
+	tests         []Job
 	okDeleteError bool
 }
 
@@ -101,8 +101,8 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 	test.EverySecond += 50
 
 	// create the array of tests
-	tests := []TestWithSchedule{{
-		Test: test,
+	tests := []JobWithSchedule{{
+		Job: test,
 	}}
 	err := r.repository.SetCronIdAndChangeSchedule(ctx, tests)
 	r.Nil(err, "Cannot change schedule")
@@ -115,17 +115,17 @@ func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 
 func (r *RepositoryOtherTestSuite) TestSetCronId() {
 	var counter int32 = 10
-	testsBefore := make([]Test, 0)
+	testsBefore := make([]Job, 0)
 	for _, test := range r.tests {
 		test.CronId = counter
 		counter += 1
 		testsBefore = append(testsBefore, test)
 	}
 
-	schedules := make([]TestWithSchedule, len(testsBefore))
+	schedules := make([]JobWithSchedule, len(testsBefore))
 	for i, test := range testsBefore {
-		schedules[i] = TestWithSchedule{
-			Test: test,
+		schedules[i] = JobWithSchedule{
+			Job: test,
 		}
 	}
 
@@ -160,16 +160,16 @@ func TestRepositoryOtherTestSuite(t *testing.T) {
 
 // Interface used to encapsulate the behavior of the two tests struct.
 type RepositoryTest interface {
-	Tests() []Test
+	Tests() []Job
 	Repository() *Repository2
 	TestSuite() *suite.Suite
 }
 
-func (r *RepositoryAddTestSuite) Tests() []Test {
+func (r *RepositoryAddTestSuite) Tests() []Job {
 	return r.tests
 }
 
-func (r *RepositoryOtherTestSuite) Tests() []Test {
+func (r *RepositoryOtherTestSuite) Tests() []Job {
 	return r.tests
 }
 
@@ -199,7 +199,7 @@ func teardown2(t RepositoryTest, okError bool) {
 	}
 }
 
-func setup(suite suite.Suite) (Repository2, []Test) {
+func setup(suite suite.Suite) (Repository2, []Job) {
 	ctx := context.Background()
 	repositoryOptions, err := PgRepositoryOptionsFromEnv()
 	suite.Nil(err, "Cannot get the correct config")
@@ -211,7 +211,7 @@ func setup(suite suite.Suite) (Repository2, []Test) {
 	if err != nil {
 		suite.FailNow("Cannot go on.")
 	}
-	tests := []Test{
+	tests := []Job{
 		{
 			Id:                   2,
 			EverySecond:          60,
@@ -229,10 +229,10 @@ func setup(suite suite.Suite) (Repository2, []Test) {
 	return repository, tests
 }
 
-func buildSchedule(r RepositoryTest) []TestWithSchedule {
-	withSchedule := make([]TestWithSchedule, len(r.Tests()))
+func buildSchedule(r RepositoryTest) []JobWithSchedule {
+	withSchedule := make([]JobWithSchedule, len(r.Tests()))
 	for i, test := range r.Tests() {
-		testWithSchedule, err := test.ToTestWithSchedule()
+		testWithSchedule, err := test.ToJobWithSchedule()
 		r.TestSuite().Nil(err, "Cannot build test with schedule")
 		if err != nil {
 			r.TestSuite().FailNow("Cannot go on with test conversion fails")

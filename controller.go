@@ -30,7 +30,7 @@ func (s *SmallBen) NewSmallBen(ctx context.Context, dbURL string) (SmallBen, err
 }
 
 // Start starts the SmallBen, by starting the inner scheduler and filling it
-// in with the needed Test.
+// in with the needed Job.
 func (s *SmallBen) Start(ctx context.Context) error {
 	s.scheduler.cron.Start()
 	// now, we fill in the scheduler
@@ -45,17 +45,17 @@ func (s *SmallBen) Stop() {
 	<-ctx.Done()
 }
 
-// Fill retrieves all the Test to execute from the database using ctx.
+// Fill retrieves all the Job to execute from the database using ctx.
 func (s *SmallBen) Fill(ctx context.Context) error {
 	// get all the tests
 	tests, err := s.repository.GetAllTestsToExecute(ctx)
 	if err != nil {
 		return err
 	}
-	// now, build the TestWithSchedule object
-	testsWithSchedule := make([]TestWithSchedule, len(tests))
+	// now, build the JobWithSchedule object
+	testsWithSchedule := make([]JobWithSchedule, len(tests))
 	for i, test := range tests {
-		testsWithSchedule[i], err = test.ToTestWithSchedule()
+		testsWithSchedule[i], err = test.ToJobWithSchedule()
 		if err != nil {
 			return err
 		}
@@ -74,12 +74,12 @@ func (s *SmallBen) Fill(ctx context.Context) error {
 // AddTests add `tests` to the scheduler, by saving also them to the database.
 // If the add operation on the database fails, then it is guaranteed that tests
 // will also be removed from the scheduler, leaving the state unchanged.
-func (s *SmallBen) AddTests(ctx context.Context, tests []Test) error {
-	// now, build the TestWithSchedule object
-	testsWithSchedule := make([]TestWithSchedule, len(tests))
+func (s *SmallBen) AddTests(ctx context.Context, tests []Job) error {
+	// now, build the JobWithSchedule object
+	testsWithSchedule := make([]JobWithSchedule, len(tests))
 	for i, test := range tests {
 		// parse the given schedule
-		testWithSchedule, err := test.ToTestWithSchedule()
+		testWithSchedule, err := test.ToJobWithSchedule()
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 	return nil
 }
 
-// ResumeTests restarts the Test whose ids are `testsID`.
+// ResumeTests restarts the Job whose ids are `testsID`.
 func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
@@ -147,9 +147,9 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 		return err
 	}
 	// now, build the schedule from the tests recovered from the database.
-	testsWithSchedule := make([]TestWithSchedule, len(tests))
+	testsWithSchedule := make([]JobWithSchedule, len(tests))
 	for i, test := range tests {
-		testsWithSchedule[i], err = test.ToTestWithSchedule()
+		testsWithSchedule[i], err = test.ToJobWithSchedule()
 		if err != nil {
 			return err
 		}
@@ -184,15 +184,15 @@ func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSche
 	}
 
 	// the tests with the new required schedule
-	testsWithScheduleNew := make([]TestWithSchedule, len(scheduleInfo))
+	testsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
 	// the tests with the old schedule
-	testsWithScheduleOld := make([]TestWithSchedule, len(scheduleInfo))
+	testsWithScheduleOld := make([]JobWithSchedule, len(scheduleInfo))
 
 	// now, we compute the new schedule while also
 	// keeping a copy of the old one
 	for i, test := range tests {
 		// compute the schedule of the old one
-		testWithScheduleOld, err := test.ToTestWithSchedule()
+		testWithScheduleOld, err := test.ToJobWithSchedule()
 		if err != nil {
 			// should never happen, but...
 			return err
@@ -201,11 +201,11 @@ func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSche
 		testsWithScheduleOld[i] = testWithScheduleOld
 
 		// make a copy of it
-		testRawNew := testWithScheduleOld.Test
+		testRawNew := testWithScheduleOld.Job
 		// and update the everySecond parameter
 		testRawNew.EverySecond = scheduleInfo[i].EverySecond
 		// in order to compute the new schedule
-		testWithScheduleNew, err := testRawNew.ToTestWithSchedule()
+		testWithScheduleNew, err := testRawNew.ToJobWithSchedule()
 		if err != nil {
 			return err
 		}

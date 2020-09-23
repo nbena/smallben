@@ -18,7 +18,7 @@ func NewScheduler() Scheduler {
 
 // AddTests2 adds `test` to the scheduler. This function never fails and updates
 // the input array with the `CronId`.
-func (s *Scheduler) AddTests2(tests []TestWithSchedule) {
+func (s *Scheduler) AddTests2(tests []JobWithSchedule) {
 
 	for _, test := range tests {
 		job := test.toRunFunctionInput()
@@ -28,7 +28,7 @@ func (s *Scheduler) AddTests2(tests []TestWithSchedule) {
 }
 
 // DeleteTestsWithSchedule remove `tests` from the scheduler. This function never fails.
-func (s *Scheduler) DeleteTestsWithSchedule(tests []TestWithSchedule) {
+func (s *Scheduler) DeleteTestsWithSchedule(tests []JobWithSchedule) {
 	for _, test := range tests {
 		s.cron.Remove(cron.EntryID(test.CronId))
 	}
@@ -77,7 +77,7 @@ func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEva
 	return modifiedRules, nil
 }
 
-func (s *Scheduler) AddTests(tests []Test) ([]Test, error) {
+func (s *Scheduler) AddTests(tests []Job) ([]Job, error) {
 
 	var collectedEntries []cron.EntryID
 	var err error
@@ -119,7 +119,7 @@ func (s *Scheduler) DeleteUserEvaluationRules(rules []UserEvaluationRule) {
 }
 
 // DeleteTests remove `tests` from the scheduler.
-func (s *Scheduler) DeleteTests(tests []Test) {
+func (s *Scheduler) DeleteTests(tests []Job) {
 	for _, test := range tests {
 		s.cron.Remove(cron.EntryID(test.CronId))
 	}
