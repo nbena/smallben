@@ -24,7 +24,7 @@ func (r *RepositoryAddTestSuite) SetupTest() {
 func (r *RepositoryAddTestSuite) TestAdd() {
 	schedules := buildSchedule(r)
 
-	err := r.repository.AddTests(ctx, schedules)
+	err := r.repository.AddJobs(ctx, schedules)
 	r.Nil(err, "Cannot add tests")
 
 	// now performs a select making sure the adding is ok
@@ -53,7 +53,7 @@ func (r *RepositoryOtherTestSuite) SetupTest() {
 	schedules := buildSchedule(r)
 
 	// also add them
-	err := r.repository.AddTests(ctx, schedules)
+	err := r.repository.AddJobs(ctx, schedules)
 	r.Nil(err, "Cannot add tests on setup")
 }
 
@@ -67,26 +67,26 @@ func (r *RepositoryOtherTestSuite) TestRetrieveSingle() {
 }
 
 func (r *RepositoryOtherTestSuite) TestDelete() {
-	err := r.repository.DeleteTestsByKeys(ctx, GetIdsFromTestList(r.tests))
+	err := r.repository.DeleteTestsByKeys(ctx, GetIdsFromJobsList(r.tests))
 	r.Nil(err, "Cannot delete tests")
 	r.okDeleteError = true
 }
 
 func (r *RepositoryOtherTestSuite) TestPause() {
-	err := r.repository.PauseTests(ctx, r.tests)
+	err := r.repository.PauseJobs(ctx, r.tests)
 	r.Nil(err, "Cannot pause tests")
 
 	// now we retrieve them
 	tests, err := r.repository.GetAllTestsToExecute(ctx)
 	r.Nil(err, "Cannot retrieve tests")
-	r.NotContains(GetIdsFromTestList(r.tests), GetIdsFromTestList(tests), "Contains failed")
+	r.NotContains(GetIdsFromJobsList(r.tests), GetIdsFromJobsList(tests), "Contains failed")
 }
 
 func (r *RepositoryOtherTestSuite) TestResume() {
-	err := r.repository.PauseTests(ctx, r.tests)
+	err := r.repository.PauseJobs(ctx, r.tests)
 	r.Nil(err, "Cannot pause tests")
 
-	err = r.repository.ResumeTests(ctx, r.tests)
+	err = r.repository.ResumeJobs(ctx, r.tests)
 	r.Nil(err, "Cannot resume tests")
 
 	tests, err := r.repository.GetAllTestsToExecute(ctx)
@@ -190,7 +190,7 @@ func (r *RepositoryOtherTestSuite) TestSuite() *suite.Suite {
 }
 
 func teardown2(t RepositoryTest, okError bool) {
-	err := t.Repository().DeleteTestsByKeys(ctx, GetIdsFromTestList(t.Tests()))
+	err := t.Repository().DeleteTestsByKeys(ctx, GetIdsFromJobsList(t.Tests()))
 	if err != nil {
 		if !okError {
 			fmt.Printf("To delete: %d test\n", len(t.Tests()))

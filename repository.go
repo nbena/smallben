@@ -26,19 +26,18 @@ func NewRepository2(ctx context.Context, options *pgxpool.Config) (Repository2, 
 	}, nil
 }
 
-// AddTests add `tests` within to the database. The update is done by using a batch
-// in a transaction.
-func (r *Repository2) AddTests(ctx context.Context, tests []JobWithSchedule) error {
-	rows := make([][]interface{}, len(tests))
-	for i, test := range tests {
+// AddJobs add `jobs` within to the database. The update is done within a transaction.
+func (r *Repository2) AddJobs(ctx context.Context, jobs []JobWithSchedule) error {
+	rows := make([][]interface{}, len(jobs))
+	for i, test := range jobs {
 		rows[i] = test.addToRaw()
 	}
 
-	copyCount, err := r.pool.CopyFrom(ctx, pgx.Identifier{"tests"}, addToColumn(), pgx.CopyFromRows(rows))
+	copyCount, err := r.pool.CopyFrom(ctx, pgx.Identifier{"jobs"}, addToColumn(), pgx.CopyFromRows(rows))
 	if err != nil {
 		return err
 	}
-	if copyCount != int64(len(tests)) {
+	if copyCount != int64(len(jobs)) {
 		return pgx.ErrNoRows
 	}
 	return nil
@@ -61,20 +60,20 @@ every_second, paused, created_at, updated_at from jobs where id=$1`, jobID)
 	return jobWithSchedule, err
 }
 
-// PauseTests pauses `tests`, i.e., changing the `paused` field to `true`.
-func (r *Repository2) PauseTests(ctx context.Context, tests []Job) error {
-	ids := GetIdsFromTestList(tests)
-	_, err := r.pool.Exec(ctx, `update tests set paused = true where id = any($1)`, ids)
+// PauseJobs pauses `jobs`, i.e., changing the `paused` field to `true`.
+func (r *Repository2) PauseJobs(ctx context.Context, jobs []Job) error {
+	ids := GetIdsFromJobsList(jobs)
+	_, err := r.pool.Exec(ctx, `update jobs set paused = true where id = any($1)`, ids)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-// ResumeTests resumes `tests`, i.e., changing the `paused` field to `false`.
-func (r *Repository2) ResumeTests(ctx context.Context, tests []Job) error {
-	ids := GetIdsFromTestList(tests)
-	_, err := r.pool.Exec(ctx, `update tests set paused = false where id = any($1)`, ids)
+// ResumeJobs resumes `jobs`, i.e., changing the `paused` field to `false`.
+func (r *Repository2) ResumeJobs(ctx context.Context, jobs []Job) error {
+	ids := GetIdsFromJobsList(jobs)
+	_, err := r.pool.Exec(ctx, `update jobs set paused = false where id = any($1)`, ids)
 	if err != nil {
 		return err
 	}

@@ -89,7 +89,7 @@ func (s *SmallBen) AddTests(ctx context.Context, tests []Job) error {
 	// now, add them to the scheduler
 	s.scheduler.AddTests2(testsWithSchedule)
 	// and them, store them within the database
-	if err := s.repository.AddTests(ctx, testsWithSchedule); err != nil {
+	if err := s.repository.AddJobs(ctx, testsWithSchedule); err != nil {
 		// in case of errors, also remove them from the scheduler
 		s.scheduler.DeleteTestsWithSchedule(testsWithSchedule)
 		return err
@@ -129,7 +129,7 @@ func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
 	}
 
 	// now update them in the database
-	if err = s.repository.PauseTests(ctx, tests); err != nil {
+	if err = s.repository.PauseJobs(ctx, tests); err != nil {
 		return err
 	}
 	// if here, we have correctly paused them, so we can go on
@@ -155,7 +155,7 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 		}
 	}
 	// resume them in the database
-	if err = s.repository.ResumeTests(ctx, tests); err != nil {
+	if err = s.repository.ResumeJobs(ctx, tests); err != nil {
 		return err
 	}
 

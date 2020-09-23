@@ -121,8 +121,8 @@ func (t *Job) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
 }
 
-// GetIdsFromTestList basically does tests.map(test -> test.id)
-func GetIdsFromTestList(tests []Job) []int32 {
+// GetIdsFromJobsList basically does tests.map(test -> test.id)
+func GetIdsFromJobsList(tests []Job) []int32 {
 	ids := make([]int32, len(tests))
 	for i, test := range tests {
 		ids[i] = test.Id
