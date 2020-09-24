@@ -139,14 +139,6 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	return result, nil
 }
 
-func (t *Job) toRunFunctionInput() *runFunctionInput {
-	return &runFunctionInput{
-		jobID:        t.ID,
-		groupID:      t.GroupID,
-		superGroupID: t.SuperGroupID,
-	}
-}
-
 func (t *Job) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
 }
@@ -164,11 +156,20 @@ func (j *JobWithSchedule) BuildJob() (Job, error) {
 	return j.job, nil
 }
 
-// GetIdsFromJobsList basically does tests.map(test -> test.id)
-func GetIdsFromJobsList(tests []Job) []int32 {
-	ids := make([]int32, len(tests))
-	for i, test := range tests {
+// GetIdsFromJobsList basically does jobs.map(job -> job.id)
+func GetIdsFromJobsList(jobs []Job) []int64 {
+	ids := make([]int64, len(jobs))
+	for i, test := range jobs {
 		ids[i] = test.ID
+	}
+	return ids
+}
+
+// GetIdsFromJobsWithScheduleList basically does jobs.map(job -> job.id)
+func GetIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
+	ids := make([]int64, len(jobs))
+	for i, job := range jobs {
+		ids[i] = job.job.ID
 	}
 	return ids
 }
@@ -176,21 +177,21 @@ func GetIdsFromJobsList(tests []Job) []int32 {
 // UpdateSchedule is the struct used to update
 // the schedule of a test.
 type UpdateSchedule struct {
-	// TestId is the ID of the tests
-	TestId int32
+	// JobID is the ID of the tests
+	JobID int64
 	// EverySecond is the new schedule
-	EverySecond int32
+	EverySecond int64
 }
 
 func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", u.EverySecond))
 }
 
-// GetIdsFromUpdateScheduleList basically does schedules.map(test -> test.id)
-func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int32 {
-	ids := make([]int32, len(schedules))
+// GetIdsFromUpdateScheduleList basically does schedules.map(job -> job.id)
+func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int64 {
+	ids := make([]int64, len(schedules))
 	for i, test := range schedules {
-		ids[i] = test.TestId
+		ids[i] = test.JobID
 	}
 	return ids
 }

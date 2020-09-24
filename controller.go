@@ -1,7 +1,6 @@
 package smallben
 
 import (
-	"context"
 	"gorm.io/gorm"
 )
 
@@ -111,55 +110,60 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	return nil
 }
 
-// PauseTests pause the tests whose id are in `testsID`. It returns an error
-// of type `pgx.ErrNoRows` if some of the tests have not been found.
-func (s *SmallBen) PauseJobs(ctx context.Context, jobsID []int32) error {
-	// grab the tests
+// PauseJobs pause the jobs whose id are in `jobsID`. It returns an error
+// of type `gorm.ErrRecordNotFound` if some of the jobs have not been found.
+func (s *SmallBen) PauseJobs(jobsID []int64) error {
+	// grab the jobs
 	// we need to know the cron id
-	tests, err := s.repository.GetJobsByIds(ctx, jobsID)
+	jobs, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
 		return err
 	}
 
 	// now update them in the database
-	if err = s.repository.PauseJobs(ctx, tests); err != nil {
+	if err = s.repository.PauseJobs(jobs); err != nil {
 		return err
 	}
 	// if here, we have correctly paused them, so we can go on
 	// and safely delete them from the database.
-	s.scheduler.DeleteJobs(tests)
+	s.scheduler.DeleteJobs(jobs)
 	return nil
 }
 
-// ResumeTests restarts the Job whose ids are `testsID`.
-func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
-	// grab the tests
-	// we need to know the cron id
-	tests, err := s.repository.GetJobsByIds(ctx, testsID)
+// ResumeTests restarts the Job whose ids are `jobsID`.
+// Eventual jobs that were not paused, will keep run smoothly.
+// In case of errors during the last steps of the execution,
+// the jobs are removed from the scheduler.
+func (s *SmallBen) ResumeJobs(jobsID []int64) error {
+	// grab the jobs
+	jobs, err := s.repository.GetJobsByIdS(jobsID)
 	if err != nil {
 		return err
 	}
-	// now, build the schedule from the tests recovered from the database.
-	testsWithSchedule := make([]JobWithSchedule, len(tests))
-	for i, test := range tests {
-		testsWithSchedule[i], err = test.ToJobWithSchedule()
-		if err != nil {
-			return err
+
+	// now, we have to making sure those jobs are not already in the scheduler
+	// it's easier, just pick up those whose cron_id = 0
+	// because when a job is being paused, it gets a cron_id of 0.
+	var finalJobs []JobWithSchedule
+	for _, job := range jobs {
+		if job.job.CronID == DefaultCronID {
+			finalJobs = append(finalJobs, job)
 		}
 	}
-	// resume them in the database
-	if err = s.repository.ResumeJobs(ctx, tests); err != nil {
+
+	// ok, now we mark those jobs as resumed
+	if err = s.repository.ResumeJobs(finalJobs); err != nil {
 		return err
 	}
 
 	// and now add them in the scheduler
-	s.scheduler.AddTests2(testsWithSchedule)
+	s.scheduler.AddJobs(finalJobs)
 
 	// now, update the database by setting the cron id
-	if err = s.repository.SetCronIdOfJobsWithSchedule(ctx, testsWithSchedule); err != nil {
+	if err = s.repository.SetCronId(finalJobs); err != nil {
 		// in case there have been errors, we clean up the scheduler too
 		// leaving the state unchanged.
-		s.scheduler.DeleteJobs(tests)
+		s.scheduler.DeleteJobsWithSchedule(finalJobs)
 		return err
 	}
 	return nil
@@ -169,57 +173,40 @@ func (s *SmallBen) ResumeTests(ctx context.Context, testsID []int32) error {
 // of the required tests.
 // In case of errors, it is guaranteed that, in the worst case, tests will be removed
 // from the scheduler will still being in the database with the old schedule.
-func (s *SmallBen) UpdateSchedule(ctx context.Context, scheduleInfo []UpdateSchedule) error {
-	// first, we grab all the tests
-	tests, err := s.repository.GetJobsByIds(ctx, GetIdsFromUpdateScheduleList(scheduleInfo))
+func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
+	// first, we grab all the jobsWithScheduleOld
+	jobsWithScheduleOld, err := s.repository.GetJobsByIdS(GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
 		return err
 	}
 
-	// the tests with the new required schedule
-	testsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
-	// the tests with the old schedule
-	testsWithScheduleOld := make([]JobWithSchedule, len(scheduleInfo))
+	// the jobsWithScheduleOld with the new required schedule
+	jobsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
 
-	// now, we compute the new schedule while also
-	// keeping a copy of the old one
-	for i, test := range tests {
-		// compute the schedule of the old one
-		testWithScheduleOld, err := test.ToJobWithSchedule()
-		if err != nil {
-			// should never happen, but...
-			return err
-		}
-		// insert the test with the old schedule in the list
-		testsWithScheduleOld[i] = testWithScheduleOld
-
-		// make a copy of it
-		testRawNew := testWithScheduleOld.Job
-		// and update the everySecond parameter
-		testRawNew.EverySecond = scheduleInfo[i].EverySecond
-		// in order to compute the new schedule
-		testWithScheduleNew, err := testRawNew.ToJobWithSchedule()
+	// compute the new schedule
+	// for the required jobs
+	for i, job := range jobsWithScheduleOld {
+		newJobRaw := job.job
+		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
+		newJob, err := newJobRaw.ToJobWithSchedule()
 		if err != nil {
 			return err
 		}
-		// and insert them in the list
-		testsWithScheduleNew[i] = testWithScheduleNew
+		// ok, now store the new job into the list
+		jobsWithScheduleNew[i] = newJob
+
 	}
 
-	// now, we remove the tests from scheduler
-	// it is safe to remove tests from the scheduler even if they
-	// are not in the scheduler.
-	// It is ok to delete tests even if they are not in the scheduler.
-	s.scheduler.DeleteJobsWithSchedule(testsWithScheduleNew)
+	// now, remove the jobs from the scheduler
+	s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 
-	// now, we (re-)add them to the scheduler
-	s.scheduler.AddTests2(testsWithScheduleNew)
+	// now, we re-add them to the scheduler
+	s.scheduler.AddJobs(jobsWithScheduleNew)
 
-	// now, we update the cron id in the database and also we update
-	// the schedule. And we're done
-	if err = s.repository.SetCronIdAndChangeSchedule(ctx, testsWithScheduleNew); err != nil {
-		// in this case, we remove them from the scheduler
-		s.scheduler.DeleteJobsWithSchedule(testsWithScheduleNew)
+	// and update the database
+	if err = s.repository.SetCronIdAndChangeSchedule(jobsWithScheduleNew); err != nil {
+		// in case of errors, remove from the scheduler
+		s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 		return err
 	}
 	return nil

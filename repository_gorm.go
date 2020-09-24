@@ -4,6 +4,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const DefaultCronID = int64(0)
+
 type Repository3 struct {
 	db *gorm.DB
 }
@@ -55,8 +57,15 @@ func (r *Repository3) PauseJobs(jobs []Job) error {
 // PauseJobs resume jobs whose id are in `jobs`.
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobs.
-func (r *Repository3) ResumeJobs(jobs []Job) error {
-	return r.updatePausedField(jobs, false)
+func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
+	result := r.db.Table("jobs").Where("id in ?", GetIds)).Updates(map[string]interface{}{"paused": false})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != int64(len(jobs)) {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetAllJobsToExecute returns all the jobs whose `paused` field is set to `false`.
@@ -76,6 +85,9 @@ func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 	return jobs, nil
 }
 
+// GetRawJobsByIds returns all the jobs whose ids are in `jobsID`.
+// Returns an error of kind `gorm.ErrRecordNotFound` in case
+// there are less jobs than the requested ones.
 func (r *Repository3) GetRawJobsByIds(jobsID []int64) ([]Job, error) {
 	var rawJobs []Job
 	result := r.db.Find(&rawJobs, "id in ?", jobsID)
@@ -86,6 +98,25 @@ func (r *Repository3) GetRawJobsByIds(jobsID []int64) ([]Job, error) {
 		return nil, gorm.ErrRecordNotFound
 	}
 	return rawJobs, nil
+}
+
+// GetJobsByIds returns all the jobs whose ids are in `jobsID`.
+// Returns an error of kind `gorm.ErrRecordNotFound` in case
+// there are less jobs than the requested ones.
+func (r *Repository3) GetJobsByIdS(jobsID []int64) ([]JobWithSchedule, error) {
+	rawJobs, err := r.GetRawJobsByIds(jobsID)
+	if err != nil {
+		return nil, err
+	}
+	jobs := make([]JobWithSchedule, len(rawJobs))
+	for i, rawJob := range rawJobs {
+		job, err := rawJob.ToJobWithSchedule()
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = job
+	}
+	return jobs, nil
 }
 
 func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
@@ -133,7 +164,7 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 }
 
 func (r *Repository3) updatePausedField(jobs []Job, paused bool) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsList(jobs)).Updates(map[string]interface{}{"paused": paused})
+	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
 	if result.Error != nil {
 		return result.Error
 	}
