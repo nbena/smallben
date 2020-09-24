@@ -68,6 +68,7 @@ func (s *SmallBen) Fill() error {
 	return nil
 }
 
+// AddJobs add `jobs` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	// build the JobWithSchedule struct
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
@@ -89,44 +90,18 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	return nil
 }
 
-// AddTests add `tests` to the scheduler, by saving also them to the database.
-// If the add operation on the database fails, then it is guaranteed that tests
-// will also be removed from the scheduler, leaving the state unchanged.
-func (s *SmallBen) AddTests(ctx context.Context, tests []Job) error {
-	// now, build the JobWithSchedule object
-	testsWithSchedule := make([]JobWithSchedule, len(tests))
-	for i, test := range tests {
-		// parse the given schedule
-		testWithSchedule, err := test.ToJobWithSchedule()
-		if err != nil {
-			return err
-		}
-		// if no errors, add to the array
-		testsWithSchedule[i] = testWithSchedule
-	}
-	// now, add them to the scheduler
-	s.scheduler.AddTests2(testsWithSchedule)
-	// and them, store them within the database
-	if err := s.repository.AddJobs(ctx, testsWithSchedule); err != nil {
-		// in case of errors, also remove them from the scheduler
-		s.scheduler.DeleteJobsWithSchedule(testsWithSchedule)
-		return err
-	}
-	return nil
-}
-
-// DeleteTests deletes `testsID` from the scheduler. It returns an error
-// of type `pgx.ErrNoRows` if some of the tests have not been found.
-func (s *SmallBen) DeleteTests(ctx context.Context, testsID []int32) error {
-	// grab the tests
+// DeleteJobs deletes `jobsID` from the scheduler. It returns an error
+// of type `gorm.ErrRecordNotFound` if some of the required jobs have not been found.
+func (s *SmallBen) DeleteJobs(jobsID []int64) error {
+	// grab the jobs
 	// we need to know the cron id
-	tests, err := s.repository.GetJobsByIds(ctx, testsID)
+	tests, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
 		return err
 	}
 
 	// now delete them
-	if err = s.repository.DeleteJobsByIds(ctx, testsID); err != nil {
+	if err = s.repository.DeleteJobsByIds(jobsID); err != nil {
 		return err
 	}
 
@@ -138,10 +113,10 @@ func (s *SmallBen) DeleteTests(ctx context.Context, testsID []int32) error {
 
 // PauseTests pause the tests whose id are in `testsID`. It returns an error
 // of type `pgx.ErrNoRows` if some of the tests have not been found.
-func (s *SmallBen) PauseTests(ctx context.Context, testsID []int32) error {
+func (s *SmallBen) PauseJobs(ctx context.Context, jobsID []int32) error {
 	// grab the tests
 	// we need to know the cron id
-	tests, err := s.repository.GetJobsByIds(ctx, testsID)
+	tests, err := s.repository.GetJobsByIds(ctx, jobsID)
 	if err != nil {
 		return err
 	}
