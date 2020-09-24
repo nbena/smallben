@@ -88,6 +88,24 @@ every_second, paused, created_at, updated_at from jobs where paused = false`)
 	return jobs, err
 }
 
+func (r *Repository2) GetAllJobsToExecute2(ctx context.Context) ([]JobWithSchedule, error){
+	var rawJobs[] Job
+	err := pgxscan.Select(ctx, &r.pool, &rawJobs, `select id, group_id, super_group_id, cron_id,
+every_second, paused, created_at, updated_at from jobs where paused = false`)
+	if err != nil {
+		return nil, err
+	}
+	jobs := make([]JobWithSchedule, len(rawJobs))
+	for i, rawJob := range rawJobs {
+		job, err := rawJob.ToJobWithSchedule()
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = job
+	}
+	return jobs, nil
+}
+
 // GetJobsByIds returns all the jobs whose IDs are in `jobsID`. It returns an
 // error of type `pgx.ErrNoRow` in case there is a mismatch between the length of the returned
 // jobs and of the input.
