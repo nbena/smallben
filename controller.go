@@ -103,10 +103,11 @@ func (s *SmallBen) fill() error {
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// build the JobWithSchedule struct
+	// build the JobWithSchedule struct for each requested job
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
 	for i, rawJob := range jobs {
 		job, err := rawJob.ToJobWithSchedule()
+		// returning on the first error
 		if err != nil {
 			return err
 		}

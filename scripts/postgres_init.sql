@@ -24,8 +24,8 @@ create table if not exists jobs (
 );
 
 -- index on the paused field
-create index if not exists paused_idx on tests(paused);
+create index if not exists paused_idx on jobs(paused);
 -- index on the group id
-create index if not exists group_idx on tests(group_id);
+create index if not exists group_idx on jobs(group_id);
 -- index on the super group id
-create index if not exists super_group_idx on tests(super_group_id);
+create index if not exists super_group_idx on jobs(super_group_id);
