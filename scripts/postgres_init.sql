@@ -1,8 +1,8 @@
 create table if not exists jobs (
     -- the test rule id
-    id integer primary key,
+    id bigint primary key,
     -- the id of the group owning this job
-    group_id integer not null,
+    group_id bigint not null,
     -- the id of the supergroup owning this group of job
     super_group_id integer not null,
     -- set to true if you want to pause this test
