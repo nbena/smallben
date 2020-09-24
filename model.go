@@ -25,30 +25,30 @@ type TestInfo interface {
 type Job struct {
 	// ID is a unique ID identifying the job object.
 	// It is chosen by the user.
-	ID int64
+	ID int64 `gorm:"primaryKey,column:id"`
 	// GroupID is the ID of the group this job is inserted in.
-	GroupID int64
+	GroupID int64 `gorm:"column:group_id"`
 	// SuperGroupID specifies the ID of the super group
 	// where this group is contained in.
-	SuperGroupID int64
+	SuperGroupID int64 `gorm:"column:super_group_id"`
 	// CronID is the ID of the cron job as assigned by the scheduler
 	// internally.
-	CronID int64
+	CronID int64 `gorm:"column:cron_id"`
 	// EverySecond specifies every how many seconds the job will run.
-	EverySecond int64
+	EverySecond int64 `gorm:"column:every_second"`
 	// Paused specifies whether this job has been paused.
-	Paused bool
+	Paused bool `gorm:"column:paused"`
 	// CreatedAt specifies when this job has been created.
-	CreatedAt time.Time
+	CreatedAt time.Time `gorm:"column:created_at"`
 	// UpdatedAt specifies the last time this object has been updated,
 	// i.e., paused/resumed/schedule updated.
-	UpdatedAt time.Time
-	// serializedJob is the gob-encoded byte array
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+	// SerializedJob is the gob-encoded byte array
 	// of the interface executing this job
-	serializedJob []byte
-	// serializedJobInput is the gob-encoded byte array
+	SerializedJob []byte `gorm:"column:serialized_job;type:bytea"`
+	// SerializedJobInput is the gob-encoded byte array
 	// of the input of the interface executing this job
-	serializedJobInput []byte
+	SerializedJobInput []byte `gorm:"column:serialized_job_input;type:bytea"`
 }
 
 func (t *Job) addToRaw() []interface{} {
@@ -61,19 +61,6 @@ func (t *Job) addToRaw() []interface{} {
 		t.EverySecond,
 		time.Now(),
 		time.Now(),
-	}
-}
-
-func addToColumn() []string {
-	return []string{
-		"id",
-		"group_id",
-		"super_group_id",
-		"cron_id",
-		"paused",
-		"every_second",
-		"created_at",
-		"updated_at",
 	}
 }
 
@@ -105,22 +92,24 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	if err != nil {
 		return result, err
 	}
-	var buffer *bytes.Buffer
+
 	var decoder *gob.Decoder
-	// decode the interface
-	buffer = bytes.NewBuffer(t.serializedJob)
-	decoder = gob.NewDecoder(buffer)
+
+	// decode the interface executing the job
+	decoder = gob.NewDecoder(bytes.NewBuffer(t.SerializedJob))
 	var runJob CronJob
 	if err = decoder.Decode(&runJob); err != nil {
+		fmt.Printf("fuck: %s\n", err.Error())
 		return result, err
 	}
+
 	// decode the input of the job function
-	buffer = bytes.NewBuffer(t.serializedJobInput)
-	decoder = gob.NewDecoder(buffer)
+	decoder = gob.NewDecoder(bytes.NewBuffer(t.SerializedJobInput))
 	var runJobInput CronJobInput
 	if err = decoder.Decode(&runJobInput); err != nil {
 		return result, err
 	}
+
 	result = JobWithSchedule{
 		job: Job{
 			ID:           t.ID,
@@ -143,18 +132,25 @@ func (t *Job) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
 }
 
+func encodeJob(encoder *gob.Encoder, job CronJob) error {
+	return encoder.Encode(&job)
+}
+
 func (j *JobWithSchedule) BuildJob() (Job, error) {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-	if err := encoder.Encode(&j.run); err != nil {
+	// if err := encoder.Encode(&j.run); err != nil {
+	//	return Job{}, err
+	// }
+	if err := encodeJob(encoder, j.run); err != nil {
 		return Job{}, err
 	}
-	j.job.serializedJob = buffer.Bytes()
+	j.job.SerializedJob = buffer.Bytes()
 	buffer.Reset()
 	if err := encoder.Encode(j.runInput); err != nil {
 		return Job{}, err
 	}
-	j.job.serializedJobInput = buffer.Bytes()
+	j.job.SerializedJobInput = buffer.Bytes()
 	return j.job, nil
 }
 

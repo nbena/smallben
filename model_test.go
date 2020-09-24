@@ -88,8 +88,8 @@ func TestJobToRaw(t *testing.T) {
 					Paused:             false,
 					CreatedAt:          now,
 					UpdatedAt:          now,
-					serializedJob:      []byte{},
-					serializedJobInput: []byte{},
+					SerializedJob:      []byte{},
+					SerializedJobInput: []byte{},
 				},
 				schedule: scheduleNeverFail(t, 20),
 				run:      &TestCronJob{},
@@ -111,8 +111,8 @@ func TestJobToRaw(t *testing.T) {
 				Paused:             false,
 				CreatedAt:          now,
 				UpdatedAt:          now,
-				serializedJob:      bufferJob1.Bytes(),
-				serializedJobInput: bufferInput1.Bytes(),
+				SerializedJob:      bufferJob1.Bytes(),
+				SerializedJobInput: bufferInput1.Bytes(),
 			},
 		},
 	}
@@ -128,7 +128,7 @@ func TestJobToRaw(t *testing.T) {
 //			SuperGroupID: 1,
 //			CronID: 0,
 //			EverySecond: 120,
-//			serializedJob: []byte{},
+//			SerializedJob: []byte{},
 //		},
 //	}
 //}

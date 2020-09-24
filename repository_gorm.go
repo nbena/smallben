@@ -1,6 +1,7 @@
 package smallben
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -29,6 +30,7 @@ func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
 			return err
 		}
 		rawJobs[i] = rawJob
+		fmt.Printf("%d", len(rawJob.SerializedJobInput))
 	}
 	return r.db.Create(&rawJobs).Error
 }
