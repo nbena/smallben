@@ -2,13 +2,29 @@ package smallben
 
 import (
 	"gorm.io/gorm"
+	"sync"
 )
 
 // SmallBen is the struct managing the persistent
 // scheduler state.
+// SmallBen is *goroutine-safe*, since all access are protected by
+// a r-w lock.
 type SmallBen struct {
+	// repository is where we store jobs.
 	repository Repository3
-	scheduler  Scheduler
+	// scheduler is the cron instance.
+	scheduler Scheduler
+	// lock protects access to each operation
+	// of SmallBen.
+	lock sync.RWMutex
+	// filled specifies if SmallBen
+	// has been filled. In that case, subsequent calls
+	// to the fill method does not change the state.
+	filled bool
+	// started specifies if SmallBen has been already
+	// started. In that case, subsequent calls to the Start
+	// method does not start the scheduler once again.
+	started bool
 }
 
 // Config regulates the internal working of the scheduler.
@@ -35,40 +51,58 @@ func NewSmallBen(config *Config) (SmallBen, error) {
 
 // Start starts the SmallBen, by starting the inner scheduler and filling it
 // in with the needed Job.
+// This call is idempotent and goroutine-safe.
 func (s *SmallBen) Start() error {
-	s.scheduler.cron.Start()
-	// now, we fill in the scheduler
-	return s.Fill()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if !s.started {
+		// start the scheduler if not started yet.
+		s.scheduler.cron.Start()
+		// and mark it as started.
+		s.started = true
+		// now, we fill in the scheduler
+		return s.fill()
+	}
+	return nil
 }
 
 // Stop stops the SmallBen. This call will block until all *running* jobs
 // have finished.
 func (s *SmallBen) Stop() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	ctx := s.scheduler.cron.Stop()
 	// Wait on ctx.Done() till all jobs have finished, then left.
 	<-ctx.Done()
 }
 
-// Fill retrieves all the Job to execute from the database
+// fill retrieves all the Job to execute from the database
 // and then schedules them for execution. In case of errors
 // it is guaranteed that *all* the jobs retrieved from the
 // database will be cancelled.
-func (s *SmallBen) Fill() error {
-	// get all the tests
-	jobs, err := s.repository.GetAllJobsToExecute()
-	// add them to the scheduler to get back the cron_id
-	s.scheduler.AddJobs(jobs)
-	// now, update the db by updating the cron entries
-	err = s.repository.SetCronId(jobs)
-	if err != nil {
-		// if there is an error, remove them from the scheduler
-		s.scheduler.DeleteJobsWithSchedule(jobs)
+// This method is *idempotent*, call it every time you want,
+// and the scheduler won't be filled in twice.
+func (s *SmallBen) fill() error {
+	if !s.filled {
+		// get all the tests
+		jobs, err := s.repository.GetAllJobsToExecute()
+		// add them to the scheduler to get back the cron_id
+		s.scheduler.AddJobs(jobs)
+		// now, update the db by updating the cron entries
+		err = s.repository.SetCronId(jobs)
+		if err != nil {
+			// if there is an error, remove them from the scheduler
+			s.scheduler.DeleteJobsWithSchedule(jobs)
+		}
+		s.filled = true
 	}
 	return nil
 }
 
 // AddJobs add `jobs` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// build the JobWithSchedule struct
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
 	for i, rawJob := range jobs {
@@ -92,6 +126,8 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 // DeleteJobs deletes `jobsID` from the scheduler. It returns an error
 // of type `gorm.ErrRecordNotFound` if some of the required jobs have not been found.
 func (s *SmallBen) DeleteJobs(jobsID []int64) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// grab the jobs
 	// we need to know the cron id
 	tests, err := s.repository.GetRawJobsByIds(jobsID)
@@ -113,6 +149,8 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 // PauseJobs pause the jobs whose id are in `jobsID`. It returns an error
 // of type `gorm.ErrRecordNotFound` if some of the jobs have not been found.
 func (s *SmallBen) PauseJobs(jobsID []int64) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// grab the jobs
 	// we need to know the cron id
 	jobs, err := s.repository.GetRawJobsByIds(jobsID)
@@ -135,6 +173,8 @@ func (s *SmallBen) PauseJobs(jobsID []int64) error {
 // In case of errors during the last steps of the execution,
 // the jobs are removed from the scheduler.
 func (s *SmallBen) ResumeJobs(jobsID []int64) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// grab the jobs
 	jobs, err := s.repository.GetJobsByIdS(jobsID)
 	if err != nil {
@@ -174,6 +214,8 @@ func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 // In case of errors, it is guaranteed that, in the worst case, tests will be removed
 // from the scheduler will still being in the database with the old schedule.
 func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// first, we grab all the jobsWithScheduleOld
 	jobsWithScheduleOld, err := s.repository.GetJobsByIdS(GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
