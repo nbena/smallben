@@ -5,7 +5,16 @@ import (
 )
 
 type Repository3 struct {
-	db gorm.DB
+	db *gorm.DB
+}
+
+// NewRepository3 returns an instance of the repository connecting to the given database.
+func NewRepository3(dialector gorm.Dialector, gormConfig *gorm.Config) (Repository3, error) {
+	db, err := gorm.Open(dialector, gormConfig)
+	if err != nil {
+		return Repository3{}, err
+	}
+	return Repository3{db: db}, nil
 }
 
 // AddJobs adds `jobs` to the database. This operation can fail
@@ -90,11 +99,32 @@ func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
 	return nil
 }
 
+// SetCronId updates the cron_id field of `jobs`.
 func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			if err := tx.Model(&job).Update("cron_id", job.job.CronID).Error; err != nil {
-				return err
+			result := tx.Model(&job).Update("cron_id", job.job.CronID)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != int64(1) {
+				return gorm.ErrRecordNotFound
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		for _, job := range jobs {
+			result := tx.Model(&job).Updates(map[string]interface{}{"cron_id": job.job.CronID, "every_second": job.job.EverySecond})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != int64(1) {
+				return gorm.ErrRecordNotFound
 			}
 		}
 		return nil

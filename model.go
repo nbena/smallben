@@ -25,17 +25,17 @@ type TestInfo interface {
 type Job struct {
 	// ID is a unique ID identifying the job object.
 	// It is chosen by the user.
-	ID int32
+	ID int64
 	// GroupID is the ID of the group this job is inserted in.
-	GroupID int32
+	GroupID int64
 	// SuperGroupID specifies the ID of the super group
 	// where this group is contained in.
-	SuperGroupID int32
+	SuperGroupID int64
 	// CronID is the ID of the cron job as assigned by the scheduler
 	// internally.
-	CronID int32
+	CronID int64
 	// EverySecond specifies every how many seconds the job will run.
-	EverySecond int32
+	EverySecond int64
 	// Paused specifies whether this job has been paused.
 	Paused bool
 	// CreatedAt specifies when this job has been created.
