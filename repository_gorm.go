@@ -58,7 +58,7 @@ func (r *Repository3) PauseJobs(jobs []Job) error {
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobs.
 func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIds)).Updates(map[string]interface{}{"paused": false})
+	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
 	if result.Error != nil {
 		return result.Error
 	}
