@@ -12,6 +12,10 @@ create table if not exists jobs (
     every_second integer not null check(every_second >= 60),
     -- id of the cron entry
     cron_id integer not null default 0,
+    -- serialized job using gob
+    serialized_job bytea not null,
+    -- serialized input of the job using gob
+    serialized_job_input bytea not null,
     -- when the item has been created
     created_at timestamp with time zone not null default current_timestamp,
     -- when the item has been updated last time

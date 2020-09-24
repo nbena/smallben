@@ -1,6 +1,8 @@
 package smallben
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"time"
@@ -41,6 +43,12 @@ type Job struct {
 	// UpdatedAt specifies the last time this object has been updated,
 	// i.e., paused/resumed/schedule updated.
 	UpdatedAt time.Time
+	// serializedJob is the gob-encoded byte array
+	// of the interface executing this job
+	serializedJob []byte
+	// serializedJobInput is the gob-encoded byte array
+	// of the input of the interface executing this job
+	serializedJobInput []byte
 }
 
 func (t *Job) addToRaw() []interface{} {
@@ -76,8 +84,10 @@ func addToColumn() []string {
 // This object should be created only by calling the method
 // ToJobWithSchedule().
 type JobWithSchedule struct {
-	Job
+	job      Job
 	schedule cron.Schedule
+	run      CronJob
+	runInput CronJobInput
 }
 
 // Schedule returns the schedule used by this object.
@@ -86,15 +96,33 @@ func (j *JobWithSchedule) Schedule() *cron.Schedule {
 }
 
 // ToJobWithSchedule returns a JobWithSchedule object from the current Job,
-// by copy. It returns errors in case the given schedule is not valid.
+// by copy. It returns errors in case the given schedule is not valid,
+// or in case the conversion of the job interface/input fails.
 func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
+	// decode the schedule
 	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", t.EverySecond))
 	if err != nil {
 		return result, err
 	}
+	var buffer *bytes.Buffer
+	var decoder *gob.Decoder
+	// decode the interface
+	buffer = bytes.NewBuffer(t.serializedJob)
+	decoder = gob.NewDecoder(buffer)
+	var runJob CronJob
+	if err = decoder.Decode(&runJob); err != nil {
+		return result, err
+	}
+	// decode the input of the job function
+	buffer = bytes.NewBuffer(t.serializedJobInput)
+	decoder = gob.NewDecoder(buffer)
+	var runJobInput CronJobInput
+	if err = decoder.Decode(&runJobInput); err != nil {
+		return result, err
+	}
 	result = JobWithSchedule{
-		Job: Job{
+		job: Job{
 			ID:           t.ID,
 			GroupID:      t.GroupID,
 			SuperGroupID: t.SuperGroupID,
@@ -105,6 +133,8 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 			UpdatedAt:    t.UpdatedAt,
 		},
 		schedule: schedule,
+		run:      runJob,
+		runInput: runJobInput,
 	}
 	return result, nil
 }
@@ -119,6 +149,19 @@ func (t *Job) toRunFunctionInput() *runFunctionInput {
 
 func (t *Job) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
+}
+
+func (j *JobWithSchedule) BuildJob() (Job, error) {
+	var encoder *gob.Encoder
+	encoder = gob.NewEncoder(bytes.NewBuffer(j.job.serializedJob))
+	if err := encoder.Encode(j.run); err != nil {
+		return Job{}, err
+	}
+	encoder = gob.NewEncoder(bytes.NewBuffer(j.job.serializedJobInput))
+	if err := encoder.Encode(j.runInput); err != nil {
+		return Job{}, err
+	}
+	return j.job, nil
 }
 
 // GetIdsFromJobsList basically does tests.map(test -> test.id)
@@ -150,4 +193,18 @@ func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int32 {
 		ids[i] = test.TestId
 	}
 	return ids
+}
+
+// CronJobInput is the input passed to the Run function.
+type CronJobInput struct {
+	JobID        int64
+	GroupID      int64
+	SuperGroupID int64
+	OtherInputs  map[string]interface{}
+}
+
+// CronJob is the interface jobs has to implement.
+// It contains only one single method, `Run`.
+type CronJob interface {
+	Run(input CronJobInput)
 }

@@ -215,14 +215,14 @@ func setup(suite suite.Suite) (Repository2, []Job) {
 		{
 			ID:           2,
 			EverySecond:  60,
-			UserId:       1,
 			SuperGroupID: 1,
+			GroupID:      1,
 			Paused:       false,
 		}, {
 			ID:           3,
 			EverySecond:  120,
-			UserId:       1,
 			SuperGroupID: 1,
+			GroupID:      1,
 			Paused:       false,
 		},
 	}

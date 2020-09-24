@@ -88,8 +88,8 @@ every_second, paused, created_at, updated_at from jobs where paused = false`)
 	return jobs, err
 }
 
-func (r *Repository2) GetAllJobsToExecute2(ctx context.Context) ([]JobWithSchedule, error){
-	var rawJobs[] Job
+func (r *Repository2) GetAllJobsToExecute2(ctx context.Context) ([]JobWithSchedule, error) {
+	var rawJobs []Job
 	err := pgxscan.Select(ctx, &r.pool, &rawJobs, `select id, group_id, super_group_id, cron_id,
 every_second, paused, created_at, updated_at from jobs where paused = false`)
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *Repository2) DeleteJobsByIds(ctx context.Context, jobsID []int32) error
 func (r *Repository2) SetCronIdOfJobsWithSchedule(ctx context.Context, jobs []JobWithSchedule) error {
 	rawTests := make([]Job, len(jobs))
 	for i, test := range jobs {
-		rawTests[i] = test.Job
+		rawTests[i] = test.job
 	}
 	return r.transactionUpdate(
 		ctx,
@@ -179,7 +179,7 @@ func (r *Repository2) SetCronIdOfJobsWithSchedule(ctx context.Context, jobs []Jo
 func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, jobs []JobWithSchedule) error {
 	rawTests := make([]Job, len(jobs))
 	for i, test := range jobs {
-		rawTests[i] = test.Job
+		rawTests[i] = test.job
 	}
 	return r.transactionUpdate(
 		ctx,
