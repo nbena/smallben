@@ -19,7 +19,7 @@ func NewRepository3(dialector gorm.Dialector, gormConfig *gorm.Config) (Reposito
 	return Repository3{db: db}, nil
 }
 
-// AddJobs adds `jobs` to the database. This operation can fail
+// AddJobs adds `jobsToAdd` to the database. This operation can fail
 // if job serialization fails, or for database errors.
 func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
 	rawJobs := make([]Job, len(jobs))
@@ -47,18 +47,18 @@ func (r *Repository3) GetJob(jobID int64) (JobWithSchedule, error) {
 	return job, nil
 }
 
-// PauseJobs pause jobs whose id are in `jobs`.
+// PauseJobs pause jobsToAdd whose id are in `jobsToAdd`.
 // It returns an error `gorm.ErrRecordNotFound` in case
-// the number of updated rows is different then the length of jobs.
+// the number of updated rows is different then the length of jobsToAdd.
 func (r *Repository3) PauseJobs(jobs []Job) error {
 	return r.updatePausedField(jobs, true)
 }
 
-// PauseJobs resume jobs whose id are in `jobs`.
+// PauseJobs resume jobsToAdd whose id are in `jobsToAdd`.
 // It returns an error `gorm.ErrRecordNotFound` in case
-// the number of updated rows is different then the length of jobs.
+// the number of updated rows is different then the length of jobsToAdd.
 func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
+	result := r.db.Table("jobsToAdd").Where("id in ?", GetIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -68,7 +68,7 @@ func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
 	return nil
 }
 
-// GetAllJobsToExecute returns all the jobs whose `paused` field is set to `false`.
+// GetAllJobsToExecute returns all the jobsToAdd whose `paused` field is set to `false`.
 func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 	var rawJobs []Job
 	if err := r.db.Find(&rawJobs, "paused = false").Error; err != nil {
@@ -85,9 +85,9 @@ func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 	return jobs, nil
 }
 
-// GetRawJobsByIds returns all the jobs whose ids are in `jobsID`.
+// GetRawJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
 // Returns an error of kind `gorm.ErrRecordNotFound` in case
-// there are less jobs than the requested ones.
+// there are less jobsToAdd than the requested ones.
 func (r *Repository3) GetRawJobsByIds(jobsID []int64) ([]Job, error) {
 	var rawJobs []Job
 	result := r.db.Find(&rawJobs, "id in ?", jobsID)
@@ -100,9 +100,9 @@ func (r *Repository3) GetRawJobsByIds(jobsID []int64) ([]Job, error) {
 	return rawJobs, nil
 }
 
-// GetJobsByIds returns all the jobs whose ids are in `jobsID`.
+// GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
 // Returns an error of kind `gorm.ErrRecordNotFound` in case
-// there are less jobs than the requested ones.
+// there are less jobsToAdd than the requested ones.
 func (r *Repository3) GetJobsByIdS(jobsID []int64) ([]JobWithSchedule, error) {
 	rawJobs, err := r.GetRawJobsByIds(jobsID)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
 	return nil
 }
 
-// SetCronId updates the cron_id field of `jobs`.
+// SetCronId updates the cron_id field of `jobsToAdd`.
 func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
@@ -164,7 +164,7 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 }
 
 func (r *Repository3) updatePausedField(jobs []Job, paused bool) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
+	result := r.db.Table("jobsToAdd").Where("id in ?", GetIdsFromJobsList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
 	if result.Error != nil {
 		return result.Error
 	}

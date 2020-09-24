@@ -10,7 +10,7 @@ import (
 // SmallBen is *goroutine-safe*, since all access are protected by
 // a r-w lock.
 type SmallBen struct {
-	// repository is where we store jobs.
+	// repository is where we store jobsToAdd.
 	repository Repository3
 	// scheduler is the cron instance.
 	scheduler Scheduler
@@ -66,19 +66,19 @@ func (s *SmallBen) Start() error {
 	return nil
 }
 
-// Stop stops the SmallBen. This call will block until all *running* jobs
+// Stop stops the SmallBen. This call will block until all *running* jobsToAdd
 // have finished.
 func (s *SmallBen) Stop() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	ctx := s.scheduler.cron.Stop()
-	// Wait on ctx.Done() till all jobs have finished, then left.
+	// Wait on ctx.Done() till all jobsToAdd have finished, then left.
 	<-ctx.Done()
 }
 
 // fill retrieves all the Job to execute from the database
 // and then schedules them for execution. In case of errors
-// it is guaranteed that *all* the jobs retrieved from the
+// it is guaranteed that *all* the jobsToAdd retrieved from the
 // database will be cancelled.
 // This method is *idempotent*, call it every time you want,
 // and the scheduler won't be filled in twice.
@@ -99,7 +99,7 @@ func (s *SmallBen) fill() error {
 	return nil
 }
 
-// AddJobs add `jobs` to the scheduler.
+// AddJobs add `jobsToAdd` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -117,7 +117,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.scheduler.AddJobs(jobsWithSchedule)
 	// now, store them in the database
 	if err := s.repository.AddJobs(jobsWithSchedule); err != nil {
-		// in case of errors, we remove all those jobs from the scheduler
+		// in case of errors, we remove all those jobsToAdd from the scheduler
 		s.scheduler.DeleteJobsWithSchedule(jobsWithSchedule)
 		return err
 	}
@@ -125,11 +125,11 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 }
 
 // DeleteJobs deletes `jobsID` from the scheduler. It returns an error
-// of type `gorm.ErrRecordNotFound` if some of the required jobs have not been found.
+// of type `gorm.ErrRecordNotFound` if some of the required jobsToAdd have not been found.
 func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobs
+	// grab the jobsToAdd
 	// we need to know the cron id
 	tests, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
@@ -147,12 +147,12 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	return nil
 }
 
-// PauseJobs pause the jobs whose id are in `jobsID`. It returns an error
-// of type `gorm.ErrRecordNotFound` if some of the jobs have not been found.
+// PauseJobs pause the jobsToAdd whose id are in `jobsID`. It returns an error
+// of type `gorm.ErrRecordNotFound` if some of the jobsToAdd have not been found.
 func (s *SmallBen) PauseJobs(jobsID []int64) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobs
+	// grab the jobsToAdd
 	// we need to know the cron id
 	jobs, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
@@ -170,19 +170,19 @@ func (s *SmallBen) PauseJobs(jobsID []int64) error {
 }
 
 // ResumeTests restarts the Job whose ids are `jobsID`.
-// Eventual jobs that were not paused, will keep run smoothly.
+// Eventual jobsToAdd that were not paused, will keep run smoothly.
 // In case of errors during the last steps of the execution,
-// the jobs are removed from the scheduler.
+// the jobsToAdd are removed from the scheduler.
 func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobs
+	// grab the jobsToAdd
 	jobs, err := s.repository.GetJobsByIdS(jobsID)
 	if err != nil {
 		return err
 	}
 
-	// now, we have to making sure those jobs are not already in the scheduler
+	// now, we have to making sure those jobsToAdd are not already in the scheduler
 	// it's easier, just pick up those whose cron_id = 0
 	// because when a job is being paused, it gets a cron_id of 0.
 	var finalJobs []JobWithSchedule
@@ -192,7 +192,7 @@ func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 		}
 	}
 
-	// ok, now we mark those jobs as resumed
+	// ok, now we mark those jobsToAdd as resumed
 	if err = s.repository.ResumeJobs(finalJobs); err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	jobsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
 
 	// compute the new schedule
-	// for the required jobs
+	// for the required jobsToAdd
 	for i, job := range jobsWithScheduleOld {
 		newJobRaw := job.job
 		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
@@ -240,7 +240,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 
 	}
 
-	// now, remove the jobs from the scheduler
+	// now, remove the jobsToAdd from the scheduler
 	s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 
 	// now, we re-add them to the scheduler

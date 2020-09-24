@@ -144,19 +144,21 @@ func (t *Job) schedule() (cron.Schedule, error) {
 }
 
 func (j *JobWithSchedule) BuildJob() (Job, error) {
-	var encoder *gob.Encoder
-	encoder = gob.NewEncoder(bytes.NewBuffer(j.job.serializedJob))
-	if err := encoder.Encode(j.run); err != nil {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	if err := encoder.Encode(&j.run); err != nil {
 		return Job{}, err
 	}
-	encoder = gob.NewEncoder(bytes.NewBuffer(j.job.serializedJobInput))
+	j.job.serializedJob = buffer.Bytes()
+	buffer.Reset()
 	if err := encoder.Encode(j.runInput); err != nil {
 		return Job{}, err
 	}
+	j.job.serializedJobInput = buffer.Bytes()
 	return j.job, nil
 }
 
-// GetIdsFromJobsList basically does jobs.map(job -> job.id)
+// GetIdsFromJobsList basically does jobsToAdd.map(job -> job.id)
 func GetIdsFromJobsList(jobs []Job) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, test := range jobs {
@@ -165,7 +167,7 @@ func GetIdsFromJobsList(jobs []Job) []int64 {
 	return ids
 }
 
-// GetIdsFromJobsWithScheduleList basically does jobs.map(job -> job.id)
+// GetIdsFromJobsWithScheduleList basically does jobsToAdd.map(job -> job.id)
 func GetIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, job := range jobs {
@@ -204,7 +206,7 @@ type CronJobInput struct {
 	OtherInputs  map[string]interface{}
 }
 
-// CronJob is the interface jobs has to implement.
+// CronJob is the interface jobsToAdd has to implement.
 // It contains only one single method, `Run`.
 type CronJob interface {
 	Run(input CronJobInput)
