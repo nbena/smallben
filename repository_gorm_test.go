@@ -123,7 +123,7 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 	// we will use it for later comparison
 	jobsToExecuteBefore, err := r.repository.GetAllJobsToExecute()
 	if err != nil {
-		t.Errorf("Fail to get all jobs to execute: %s\n", err.Error())
+		t.Errorf("Fail to get all jobs to execute before pause: %s\n", err.Error())
 		t.FailNow()
 	}
 	lenOfJobsToExecuteBefore := len(jobsToExecuteBefore)
@@ -142,16 +142,34 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 	}
 
 	// now, compute the number of jobs to execute now
-	jobsToExecuteAfter, err := r.repository.GetAllJobsToExecute()
+	jobsToExecuteAfterPause, err := r.repository.GetAllJobsToExecute()
 	if err != nil {
-		t.Errorf("Fail to get all jobs to execute: %s\n", err.Error())
+		t.Errorf("Fail to get all jobs to execute after pause: %s\n", err.Error())
 		t.FailNow()
 	}
-	lenOfJobsToExecuteAfter := len(jobsToExecuteAfter)
+	lenOfJobsToExecuteAfterPause := len(jobsToExecuteAfterPause)
 
-	if lenOfJobsToExecuteBefore != lenOfJobsToExecuteAfter+len(r.jobsToAdd) {
+	if lenOfJobsToExecuteBefore != lenOfJobsToExecuteAfterPause+len(r.jobsToAdd) {
 		t.Errorf("Something went wrong during the pause. Got\n%d\nExpected\n%d\n",
-			lenOfJobsToExecuteBefore, lenOfJobsToExecuteAfter-len(r.jobsToAdd))
+			lenOfJobsToExecuteBefore, lenOfJobsToExecuteAfterPause-len(r.jobsToAdd))
+	}
+
+	// now, resume them
+	err = r.repository.ResumeJobs(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Fail to resume jobs: %s\n", err.Error())
+	}
+	// re-grab the number of jobs
+	jobsToExecuteAfterResume, err := r.repository.GetAllJobsToExecute()
+	if err != nil {
+		t.Errorf("Fail to get all jobs to execute after resume")
+		t.FailNow()
+	}
+	lenOfJobsToExecuteAfterResume := len(jobsToExecuteAfterResume)
+
+	if lenOfJobsToExecuteAfterResume != len(r.jobsToAdd) {
+		t.Errorf("Something went wrong during resume. Got\n%d\nExpected\n%d\n",
+			lenOfJobsToExecuteAfterResume, len(r.jobsToAdd))
 	}
 
 }
