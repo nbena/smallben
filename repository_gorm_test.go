@@ -245,10 +245,19 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 		ID: 1000,
 	}
 
-	// get
+	// get with just one
 	_, err := r.repository.GetJob(1000)
 	if err == nil {
 		t.Error("GetJob error expected. Should have been not nil.\n")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+
+	// get with more
+	_, err = r.repository.GetJobsByIdS([]int64{10000})
+	if err == nil {
+		t.Error("GetJobs error expected. Should have been not nil.\n")
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
