@@ -111,6 +111,27 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 }
 
+func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
+	// add the tests, this way we can pause them
+	err := r.repository.AddJobs(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// and now we can pause them
+	// we need to convert to the raw format
+	rawJobs := make([]Job, len(r.jobsToAdd))
+	for i, job := range r.jobsToAdd {
+		rawJobs[i] = job.job
+	}
+
+	err = r.repository.PauseJobs(rawJobs)
+	if err != nil {
+		t.Errorf("Fail to pause jobs: %s\n", err.Error())
+	}
+}
+
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 	res, err := cron.ParseStandard(fmt.Sprintf("@every %ds", seconds))
 	if err != nil {
@@ -168,7 +189,7 @@ func (r *RepositoryTestSuite) teardown(t *testing.T) {
 	}
 }
 
-func TestRepositoryTestSuite(t *testing.T) {
+func buildRepositoryTestSuite(t *testing.T) []*RepositoryTestSuite {
 	dialectors := []gorm.Dialector{
 		postgres.Open(pgConn),
 	}
@@ -176,10 +197,25 @@ func TestRepositoryTestSuite(t *testing.T) {
 	for i, dialector := range dialectors {
 		tests[i] = NewRepositoryTestSuite(dialector, t)
 	}
+	return tests
+}
+
+func TestRepositoryAddTestSuite(t *testing.T) {
+	tests := buildRepositoryTestSuite(t)
 
 	for _, test := range tests {
 		test.setup(t)
 		test.TestAddNoError(t)
+		test.teardown(t)
+	}
+}
+
+func TestRepositoryPauseResume(t *testing.T) {
+	tests := buildRepositoryTestSuite(t)
+
+	for _, test := range tests {
+		test.setup(t)
+		test.TestPauseJobs(t)
 		test.teardown(t)
 	}
 }

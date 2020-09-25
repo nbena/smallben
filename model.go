@@ -51,19 +51,6 @@ type Job struct {
 	SerializedJobInput []byte `gorm:"column:serialized_job_input;type:bytea"`
 }
 
-func (t *Job) addToRaw() []interface{} {
-	return []interface{}{
-		t.ID,
-		t.GroupID,
-		t.SuperGroupID,
-		t.CronID,
-		t.Paused,
-		t.EverySecond,
-		time.Now(),
-		time.Now(),
-	}
-}
-
 // JobWithSchedule is a job object
 // with a cron.Schedule object in it.
 // The schedule can be accessed by using the Schedule()
@@ -99,7 +86,6 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	decoder = gob.NewDecoder(bytes.NewBuffer(t.SerializedJob))
 	var runJob CronJob
 	if err = decoder.Decode(&runJob); err != nil {
-		fmt.Printf("fuck: %s\n", err.Error())
 		return result, err
 	}
 

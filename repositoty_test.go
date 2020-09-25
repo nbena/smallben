@@ -143,7 +143,7 @@ package smallben
 //	}
 //}
 //
-//func TestRepositoryTestSuite(t *testing.T) {
+//func TestRepositoryAddTestSuite(t *testing.T) {
 //	suite.Run(t, new(RepositoryAddTestSuite))
 //}
 //
