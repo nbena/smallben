@@ -10,13 +10,13 @@ import (
 
 type jobToRawTest struct {
 	withSchedule JobWithSchedule
-	expectedRaw  Job
+	expectedRaw  RawJob
 }
 
 func (j *jobToRawTest) TestToRaw(t *testing.T) {
 	rawBuilt, err := j.withSchedule.BuildJob()
 	if err != nil {
-		t.Errorf("Cannot build Job from JobWithSchedule")
+		t.Errorf("Cannot build RawJob from JobWithSchedule")
 	}
 	if !reflect.DeepEqual(j.expectedRaw, rawBuilt) {
 		t.Errorf("The build test is wrong. Got\n%+v\nExpected\n%+v\n", rawBuilt, j.expectedRaw)
@@ -55,7 +55,7 @@ func TestJobToRaw(t *testing.T) {
 	pairs := []jobToRawTest{
 		{
 			withSchedule: JobWithSchedule{
-				job: Job{
+				job: RawJob{
 					ID:                 1,
 					GroupID:            1,
 					SuperGroupID:       1,
@@ -78,7 +78,7 @@ func TestJobToRaw(t *testing.T) {
 					},
 				},
 			},
-			expectedRaw: Job{
+			expectedRaw: RawJob{
 				ID:                 1,
 				GroupID:            1,
 				SuperGroupID:       1,
@@ -99,7 +99,7 @@ func TestJobToRaw(t *testing.T) {
 }
 
 //func TestJobFromRaw(t *testing.T){
-//	raw := []Job{
+//	raw := []RawJob{
 //		{
 //			ID: 1,
 //			GroupID: 1,

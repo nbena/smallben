@@ -70,7 +70,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 	// now, re-add, in order to test the other delete method
 	s.scheduler.AddJobs(s.jobs)
 	// now we need to build the array for raw jobs
-	rawJobs := make([]Job, len(s.jobs))
+	rawJobs := make([]RawJob, len(s.jobs))
 	for i := range s.jobs {
 		rawJobs[i] = s.jobs[i].job
 	}
@@ -88,7 +88,7 @@ func (s *SchedulerTestSuite) setup() {
 
 	s.jobs = []JobWithSchedule{
 		{
-			job: Job{
+			job: RawJob{
 				ID:                 1,
 				GroupID:            1,
 				SuperGroupID:       1,
@@ -112,7 +112,7 @@ func (s *SchedulerTestSuite) setup() {
 			schedule: cron.ConstantDelaySchedule{Delay: 1 * time.Second},
 		},
 		{
-			job: Job{
+			job: RawJob{
 				ID:                 2,
 				GroupID:            1,
 				SuperGroupID:       1,
@@ -136,7 +136,7 @@ func (s *SchedulerTestSuite) setup() {
 			schedule: cron.ConstantDelaySchedule{Delay: 1 * time.Second},
 		},
 		{
-			job: Job{
+			job: RawJob{
 				ID:                 3,
 				GroupID:            1,
 				SuperGroupID:       1,

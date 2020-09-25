@@ -5,7 +5,7 @@ package smallben
 //type RepositoryAddTestSuite struct {
 //	suite.Suite
 //	repository Repository2
-//	tests      []Job
+//	tests      []RawJob
 //}
 //
 //func (r *RepositoryAddTestSuite) SetupTest() {
@@ -33,7 +33,7 @@ package smallben
 //type RepositoryOtherTestSuite struct {
 //	suite.Suite
 //	repository    Repository2
-//	tests         []Job
+//	tests         []RawJob
 //	okDeleteError bool
 //}
 //
@@ -60,7 +60,7 @@ package smallben
 //}
 //
 //func (r *RepositoryOtherTestSuite) TestDelete() {
-//	err := r.repository.DeleteJobsByIds(ctx, GetIdsFromJobsList(r.tests))
+//	err := r.repository.DeleteJobsByIds(ctx, GetIdsFromJobRawList(r.tests))
 //	r.Nil(err, "Cannot delete tests")
 //	r.okDeleteError = true
 //}
@@ -72,7 +72,7 @@ package smallben
 //	// now we retrieve them
 //	tests, err := r.repository.GetAllJobsToExecute(ctx)
 //	r.Nil(err, "Cannot retrieve tests")
-//	r.NotContains(GetIdsFromJobsList(r.tests), GetIdsFromJobsList(tests), "Contains failed")
+//	r.NotContains(GetIdsFromJobRawList(r.tests), GetIdsFromJobRawList(tests), "Contains failed")
 //}
 //
 //func (r *RepositoryOtherTestSuite) TestResume() {
@@ -95,7 +95,7 @@ package smallben
 //
 //	// create the array of tests
 //	tests := []JobWithSchedule{{
-//		Job: test,
+//		RawJob: test,
 //	}}
 //	err := r.repository.SetCronIdAndChangeSchedule(ctx, tests)
 //	r.Nil(err, "Cannot change schedule")
@@ -108,7 +108,7 @@ package smallben
 //
 //func (r *RepositoryOtherTestSuite) TestSetCronId() {
 //	var counter int32 = 10
-//	testsBefore := make([]Job, 0)
+//	testsBefore := make([]RawJob, 0)
 //	for _, test := range r.tests {
 //		test.CronID = counter
 //		counter += 1
@@ -118,7 +118,7 @@ package smallben
 //	schedules := make([]JobWithSchedule, len(testsBefore))
 //	for i, test := range testsBefore {
 //		schedules[i] = JobWithSchedule{
-//			Job: test,
+//			RawJob: test,
 //		}
 //	}
 //
@@ -153,16 +153,16 @@ package smallben
 //
 //// Interface used to encapsulate the behavior of the two tests struct.
 //type RepositoryTest interface {
-//	Tests() []Job
+//	Tests() []RawJob
 //	Repository() *Repository2
 //	TestSuite() *suite.Suite
 //}
 //
-//func (r *RepositoryAddTestSuite) Tests() []Job {
+//func (r *RepositoryAddTestSuite) Tests() []RawJob {
 //	return r.tests
 //}
 //
-//func (r *RepositoryOtherTestSuite) Tests() []Job {
+//func (r *RepositoryOtherTestSuite) Tests() []RawJob {
 //	return r.tests
 //}
 //
@@ -183,7 +183,7 @@ package smallben
 //}
 //
 //func teardown2(t RepositoryTest, okError bool) {
-//	err := t.Repository().DeleteJobsByIds(ctx, GetIdsFromJobsList(t.Tests()))
+//	err := t.Repository().DeleteJobsByIds(ctx, GetIdsFromJobRawList(t.Tests()))
 //	if err != nil {
 //		if !okError {
 //			fmt.Printf("To delete: %d test\n", len(t.Tests()))
@@ -192,7 +192,7 @@ package smallben
 //	}
 //}
 //
-//func setup(suite suite.Suite) (Repository2, []Job) {
+//func setup(suite suite.Suite) (Repository2, []RawJob) {
 //	ctx := context.Background()
 //	repositoryOptions, err := PgRepositoryOptionsFromEnv()
 //	suite.Nil(err, "Cannot get the correct config")
@@ -204,7 +204,7 @@ package smallben
 //	if err != nil {
 //		suite.FailNow("Cannot go on.")
 //	}
-//	tests := []Job{
+//	tests := []RawJob{
 //		{
 //			ID:           2,
 //			EverySecond:  60,

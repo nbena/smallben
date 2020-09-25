@@ -20,9 +20,68 @@ type TestInfo interface {
 	UserEvaluationRuleId() int
 }
 
-// Job is the struct used to interact with the
-// persistent scheduler.
+// Job is the struct used to interact with SmallBen.
 type Job struct {
+	// ID is a unique ID identifying the job object.
+	// It is chosen by the user.
+	ID int64
+	// GroupID is the ID of the group this job is inserted in.
+	GroupID int64
+	// SuperGroupID specifies the ID of the super group
+	// where this group is contained in.
+	SuperGroupID int64
+	// CronID is the ID of the cron job as assigned by the scheduler
+	// internally.
+	CronID int64
+	// EverySecond specifies every how many seconds the job will run.
+	EverySecond int64
+	// Paused specifies whether this job has been paused.
+	Paused bool
+	// createdAt specifies when this job has been created.
+	createdAt time.Time
+	// updatedAt specifies the last time this object has been updated,
+	// i.e., paused/resumed/schedule updated.
+	updatedAt time.Time
+	// Job is the unit of work to be executed
+	Job CronJob
+	// JobInput is the additional input to pass to the inner Job.
+	JobInput map[string]interface{}
+}
+
+// Converts Job to a JobWithSchedule object.
+func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
+	var result JobWithSchedule
+	// decode the schedule
+	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", j.EverySecond))
+	if err != nil {
+		return result, err
+	}
+
+	result = JobWithSchedule{
+		job: RawJob{
+			ID:           j.ID,
+			GroupID:      j.GroupID,
+			SuperGroupID: j.SuperGroupID,
+			CronID:       0,
+			EverySecond:  j.EverySecond,
+			Paused:       false,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		},
+		schedule: schedule,
+		run:      j.Job,
+		runInput: CronJobInput{
+			JobID:        j.ID,
+			GroupID:      j.GroupID,
+			SuperGroupID: j.SuperGroupID,
+			OtherInputs:  j.JobInput,
+		},
+	}
+	return result, nil
+}
+
+// RawJob is the modelling a raw job coming from the database.
+type RawJob struct {
 	// ID is a unique ID identifying the job object.
 	// It is chosen by the user.
 	ID int64 `gorm:"primaryKey,column:id"`
@@ -51,6 +110,10 @@ type Job struct {
 	SerializedJobInput []byte `gorm:"column:serialized_job_input;type:bytea"`
 }
 
+func (j *RawJob) TableName() string {
+	return "jobs"
+}
+
 // JobWithSchedule is a job object
 // with a cron.Schedule object in it.
 // The schedule can be accessed by using the Schedule()
@@ -58,7 +121,7 @@ type Job struct {
 // This object should be created only by calling the method
 // ToJobWithSchedule().
 type JobWithSchedule struct {
-	job      Job
+	job      RawJob
 	schedule cron.Schedule
 	run      CronJob
 	runInput CronJobInput
@@ -69,13 +132,13 @@ func (j *JobWithSchedule) Schedule() *cron.Schedule {
 	return &j.schedule
 }
 
-// ToJobWithSchedule returns a JobWithSchedule object from the current Job,
+// ToJobWithSchedule returns a JobWithSchedule object from the current RawJob,
 // by copy. It returns errors in case the given schedule is not valid,
 // or in case the conversion of the job interface/input fails.
-func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
+func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
 	// decode the schedule
-	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", t.EverySecond))
+	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", j.EverySecond))
 	if err != nil {
 		return result, err
 	}
@@ -83,29 +146,29 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	var decoder *gob.Decoder
 
 	// decode the interface executing the job
-	decoder = gob.NewDecoder(bytes.NewBuffer(t.SerializedJob))
+	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJob))
 	var runJob CronJob
 	if err = decoder.Decode(&runJob); err != nil {
 		return result, err
 	}
 
 	// decode the input of the job function
-	decoder = gob.NewDecoder(bytes.NewBuffer(t.SerializedJobInput))
+	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJobInput))
 	var runJobInput CronJobInput
 	if err = decoder.Decode(&runJobInput); err != nil {
 		return result, err
 	}
 
 	result = JobWithSchedule{
-		job: Job{
-			ID:           t.ID,
-			GroupID:      t.GroupID,
-			SuperGroupID: t.SuperGroupID,
-			CronID:       t.CronID,
-			EverySecond:  t.EverySecond,
-			Paused:       t.Paused,
-			CreatedAt:    t.CreatedAt,
-			UpdatedAt:    t.UpdatedAt,
+		job: RawJob{
+			ID:           j.ID,
+			GroupID:      j.GroupID,
+			SuperGroupID: j.SuperGroupID,
+			CronID:       j.CronID,
+			EverySecond:  j.EverySecond,
+			Paused:       j.Paused,
+			CreatedAt:    j.CreatedAt,
+			UpdatedAt:    j.UpdatedAt,
 		},
 		schedule: schedule,
 		run:      runJob,
@@ -114,34 +177,34 @@ func (t *Job) ToJobWithSchedule() (JobWithSchedule, error) {
 	return result, nil
 }
 
-func (t *Job) schedule() (cron.Schedule, error) {
-	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", t.EverySecond))
+func (j *RawJob) schedule() (cron.Schedule, error) {
+	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", j.EverySecond))
 }
 
 func encodeJob(encoder *gob.Encoder, job CronJob) error {
 	return encoder.Encode(&job)
 }
 
-func (j *JobWithSchedule) BuildJob() (Job, error) {
+func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 	// if err := encoder.Encode(&j.run); err != nil {
-	//	return Job{}, err
+	//	return RawJob{}, err
 	// }
 	if err := encodeJob(encoder, j.run); err != nil {
-		return Job{}, err
+		return RawJob{}, err
 	}
 	j.job.SerializedJob = buffer.Bytes()
 	buffer.Reset()
 	if err := encoder.Encode(j.runInput); err != nil {
-		return Job{}, err
+		return RawJob{}, err
 	}
 	j.job.SerializedJobInput = buffer.Bytes()
 	return j.job, nil
 }
 
-// GetIdsFromJobsList basically does jobsToAdd.map(job -> job.id)
-func GetIdsFromJobsList(jobs []Job) []int64 {
+// GetIdsFromJobRawList basically does jobs.map(job -> job.id)
+func GetIdsFromJobRawList(jobs []RawJob) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, test := range jobs {
 		ids[i] = test.ID
@@ -149,11 +212,20 @@ func GetIdsFromJobsList(jobs []Job) []int64 {
 	return ids
 }
 
-// GetIdsFromJobsWithScheduleList basically does jobsToAdd.map(job -> job.id)
+// GetIdsFromJobsWithScheduleList basically does jobs.map(job -> job.id)
 func GetIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, job := range jobs {
 		ids[i] = job.job.ID
+	}
+	return ids
+}
+
+// GetIdsFromJobs basically does jobs.map(job -> job.id)
+func GetIdsFromJobList(jobs []Job) []int64 {
+	ids := make([]int64, len(jobs))
+	for i, job := range jobs {
+		ids[i] = job.ID
 	}
 	return ids
 }

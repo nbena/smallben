@@ -37,20 +37,20 @@ type Config struct {
 
 // NewSmallBen creates a new instance of SmallBen.
 // The context is used to connect with the repository.
-func NewSmallBen(config *Config) (SmallBen, error) {
+func NewSmallBen(config *Config) (*SmallBen, error) {
 	repository, err := NewRepository3(config.DbDialector, &config.DbConfig)
 	if err != nil {
-		return SmallBen{}, err
+		return nil, err
 	}
 	scheduler := NewScheduler()
-	return SmallBen{
+	return &SmallBen{
 		repository: repository,
 		scheduler:  scheduler,
 	}, nil
 }
 
 // Start starts the SmallBen, by starting the inner scheduler and filling it
-// in with the needed Job.
+// in with the needed RawJob.
 // This call is idempotent and goroutine-safe.
 func (s *SmallBen) Start() error {
 	s.lock.Lock()
@@ -76,7 +76,7 @@ func (s *SmallBen) Stop() {
 	<-ctx.Done()
 }
 
-// fill retrieves all the Job to execute from the database
+// fill retrieves all the RawJob to execute from the database
 // and then schedules them for execution. In case of errors
 // it is guaranteed that *all* the jobsToAdd retrieved from the
 // database will be cancelled.
@@ -106,7 +106,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	// build the JobWithSchedule struct for each requested job
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
 	for i, rawJob := range jobs {
-		job, err := rawJob.ToJobWithSchedule()
+		job, err := rawJob.toJobWithSchedule()
 		// returning on the first error
 		if err != nil {
 			return err
@@ -169,7 +169,7 @@ func (s *SmallBen) PauseJobs(jobsID []int64) error {
 	return nil
 }
 
-// ResumeTests restarts the Job whose ids are `jobsID`.
+// ResumeTests restarts the RawJob whose ids are `jobsID`.
 // Eventual jobsToAdd that were not paused, will keep run smoothly.
 // In case of errors during the last steps of the execution,
 // the jobsToAdd are removed from the scheduler.

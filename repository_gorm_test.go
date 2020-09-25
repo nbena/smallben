@@ -78,7 +78,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 
 	// build the ids making sure they match
-	gotIds := GetIdsFromJobsList(rawJobs)
+	gotIds := GetIdsFromJobRawList(rawJobs)
 	expectedIds := GetIdsFromJobsWithScheduleList(r.jobsToAdd)
 	if !reflect.DeepEqual(gotIds, expectedIds) {
 		t.Errorf("The retrieved jobs id is wrong. Got\n%+v\nExpected\n%+v\n", gotIds, expectedIds)
@@ -139,7 +139,7 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 
 	// and now we can pause them
 	// we need to convert to the raw format
-	rawJobs := make([]Job, len(r.jobsToAdd))
+	rawJobs := make([]RawJob, len(r.jobsToAdd))
 	for i, job := range r.jobsToAdd {
 		rawJobs[i] = job.job
 	}
@@ -250,7 +250,7 @@ func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
 }
 
 func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
-	notExisting := Job{
+	notExisting := RawJob{
 		ID:     1000,
 		CronID: 10000,
 	}
@@ -268,7 +268,7 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetRawJobs", t)
 
 	// pause
-	err = r.repository.PauseJobs([]Job{notExisting})
+	err = r.repository.PauseJobs([]RawJob{notExisting})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Pause", t)
 
 	// resume
@@ -297,7 +297,7 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 func (r *RepositoryTestSuite) setup(t *testing.T) {
 	r.jobsToAdd = []JobWithSchedule{
 		{
-			job: Job{
+			job: RawJob{
 				ID:           1,
 				GroupID:      1,
 				SuperGroupID: 1,
@@ -315,7 +315,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			schedule: scheduleNeverFail(t, 30),
 		},
 		{
-			job: Job{
+			job: RawJob{
 				ID:           2,
 				GroupID:      1,
 				SuperGroupID: 1,
