@@ -101,50 +101,6 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 }
 
 func (r *RepositoryTestSuite) SetupTest() {
-	//var buffer bytes.Buffer
-	//
-	//// prepare some encoded data
-	//// they are needed for ToJobWithSchedule
-	//// which attempts to
-	//encoder := gob.NewEncoder(&buffer)
-	//err := encoder.Encode(&TestCronJob{})
-	//r.Nil(err)
-	//if err != nil {
-	//	r.FailNow("Cannot encode fake test")
-	//}
-	//
-	//// encode a simple job input for the first job
-	//input_1 := CronJobInput{
-	//	JobID:        0,
-	//	GroupID:      0,
-	//	SuperGroupID: 0,
-	//	OtherInputs:  nil,
-	//}
-	//
-	//jobs := []Job {
-	//	{
-	//		ID: 1,
-	//		EverySecond: 10,
-	//		GroupID: 1,
-	//		SuperGroupID: 2,
-	//		SerializedJob: buffer.Bytes(),
-	//	},{
-	//		ID: 2,
-	//		EverySecond: 30,
-	//		GroupID: 1,
-	//		SuperGroupID: 2,
-	//		SerializedJob: buffer.Bytes(),
-	//	},
-	//}
-	//for _, rawJob := range jobs {
-	//	job, err := rawJob.ToJobWithSchedule()
-	//	r.NotNil(err, "Cannot build test")
-	//	// should never happen
-	//	if err != nil {
-	//		r.FailNow("Cannot set up test with error: %s\n", err.Error())
-	//	}
-	//	r.jobsToAdd = append(r.jobsToAdd, job)
-	//}
 	r.jobsToAdd = []JobWithSchedule{
 		{
 			job: Job{
@@ -183,6 +139,11 @@ func (r *RepositoryTestSuite) SetupTest() {
 			schedule: scheduleNeverFail(r.Suite.T(), 60),
 		},
 	}
+}
+
+func (r *RepositoryTestSuite) TearDownTest() {
+	err := r.repository.DeleteJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	r.Nil(err, "Fail to delete jobs on teardown")
 }
 
 func TestRepositoryTestSuite(t *testing.T) {
