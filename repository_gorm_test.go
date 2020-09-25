@@ -119,6 +119,15 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 		t.FailNow()
 	}
 
+	// get the length of jobs to execute.
+	// we will use it for later comparison
+	jobsToExecuteBefore, err := r.repository.GetAllJobsToExecute()
+	if err != nil {
+		t.Errorf("Fail to get all jobs to execute: %s\n", err.Error())
+		t.FailNow()
+	}
+	lenOfJobsToExecuteBefore := len(jobsToExecuteBefore)
+
 	// and now we can pause them
 	// we need to convert to the raw format
 	rawJobs := make([]Job, len(r.jobsToAdd))
@@ -126,10 +135,25 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 		rawJobs[i] = job.job
 	}
 
+	// effectively pause them
 	err = r.repository.PauseJobs(rawJobs)
 	if err != nil {
 		t.Errorf("Fail to pause jobs: %s\n", err.Error())
 	}
+
+	// now, compute the number of jobs to execute now
+	jobsToExecuteAfter, err := r.repository.GetAllJobsToExecute()
+	if err != nil {
+		t.Errorf("Fail to get all jobs to execute: %s\n", err.Error())
+		t.FailNow()
+	}
+	lenOfJobsToExecuteAfter := len(jobsToExecuteAfter)
+
+	if lenOfJobsToExecuteBefore != lenOfJobsToExecuteAfter+len(r.jobsToAdd) {
+		t.Errorf("Something went wrong during the pause. Got\n%d\nExpected\n%d\n",
+			lenOfJobsToExecuteBefore, lenOfJobsToExecuteAfter-len(r.jobsToAdd))
+	}
+
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
