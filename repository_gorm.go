@@ -150,7 +150,7 @@ func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			result := tx.Model(&job).Updates(map[string]interface{}{"cron_id": job.job.CronID, "every_second": job.job.EverySecond})
+			result := tx.Model(&job.job).Updates(map[string]interface{}{"cron_id": job.job.CronID, "every_second": job.job.EverySecond})
 			if result.Error != nil {
 				return result.Error
 			}

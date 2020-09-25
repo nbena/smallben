@@ -212,6 +212,31 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 		}
 		counter += 10
 	}
+
+	newCronID := int64(100)
+	newSchedule := int64(100)
+
+	// now we do the same, but we also change the schedule
+	for i := range r.jobsToAdd {
+		r.jobsToAdd[i].job.CronID = newCronID
+		r.jobsToAdd[i].job.EverySecond = newSchedule
+	}
+
+	err = r.repository.SetCronIdAndChangeSchedule(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Fail to set cron id and change schedule: %s", err.Error())
+	}
+
+	// retrieve and check
+	jobs, err = r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	for _, job := range jobs {
+		if job.job.CronID != newCronID {
+			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.job.CronID, newCronID)
+		}
+		if job.job.EverySecond != newSchedule {
+			t.Errorf("Schedule not changed. Got: %d Expected: %d\n", job.job.EverySecond, newSchedule)
+		}
+	}
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
