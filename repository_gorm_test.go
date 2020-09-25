@@ -245,6 +245,7 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 		ID: 1000,
 	}
 
+	// pause
 	err := r.repository.PauseJobs([]Job{notExisting})
 	if err == nil {
 		t.Error("Pause error expected. Should have been not nil.\n")
@@ -252,6 +253,16 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
 	}
+
+	// resume
+	err = r.repository.ResumeJobs([]JobWithSchedule{{job: notExisting}})
+	if err == nil {
+		t.Error("Resume error expected. Should have been not nil.\n")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
