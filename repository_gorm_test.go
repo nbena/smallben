@@ -245,8 +245,17 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 		ID: 1000,
 	}
 
+	// get
+	_, err := r.repository.GetJob(1000)
+	if err == nil {
+		t.Error("GetJob error expected. Should have been not nil.\n")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+
 	// pause
-	err := r.repository.PauseJobs([]Job{notExisting})
+	err = r.repository.PauseJobs([]Job{notExisting})
 	if err == nil {
 		t.Error("Pause error expected. Should have been not nil.\n")
 	}
