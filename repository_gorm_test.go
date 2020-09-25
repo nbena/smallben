@@ -279,6 +279,10 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	err = r.repository.SetCronId([]JobWithSchedule{{job: notExisting}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronId", t)
 
+	// set cron id and change schedule
+	err = r.repository.SetCronIdAndChangeSchedule([]JobWithSchedule{{job: notExisting}})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronIdAndChangeSchedule", t)
+
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
