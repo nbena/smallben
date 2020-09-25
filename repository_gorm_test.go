@@ -254,10 +254,19 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
 	}
 
-	// get with more
+	// get with many
 	_, err = r.repository.GetJobsByIdS([]int64{10000})
 	if err == nil {
 		t.Error("GetJobs error expected. Should have been not nil.\n")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+
+	// get with many -- raw
+	_, err = r.repository.GetRawJobsByIds([]int64{10000})
+	if err == nil {
+		t.Error("GetRawJobs error expected. Should have been not nil.\n")
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
