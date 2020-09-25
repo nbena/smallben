@@ -4,10 +4,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/robfig/cron/v3"
-	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -33,7 +33,6 @@ func (t *TestCronJob) Run(input CronJobInput) {
 }
 
 type RepositoryTestSuite struct {
-	suite.Suite
 	repository Repository3
 	jobsToAdd  []JobWithSchedule
 }
@@ -52,43 +51,64 @@ func NewRepositoryTestSuite(dialector gorm.Dialector, t *testing.T) *RepositoryT
 // TestAddNoError tests that adding a series of jobsToAdd works.
 // Checks various way of retrieve the job, including
 // the execution of a retrieved job.
-func (r *RepositoryTestSuite) TestAddNoError() {
+func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 
 	// add them
 	err := r.repository.AddJobs(r.jobsToAdd)
-	r.Nil(err, "Cannot add jobsToAdd")
+	if err != nil {
+		t.Errorf("Fail to add jobsToAdd: %s\n", err.Error())
+	}
 
 	// retrieve them using GetRawByIds
 	rawJobs, err := r.repository.GetRawJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
-	r.Nil(err, "Cannot get raw jobsToAdd")
-	r.Equal(len(rawJobs), len(r.jobsToAdd))
+	if err != nil {
+		t.Errorf("Cannot get raw jobsToAdd: %s\n", err.Error())
+	}
+	if len(rawJobs) != len(r.jobsToAdd) {
+		t.Errorf("The number of retrieved test is wrong. Got %d, expected: %d\n", len(rawJobs), len(r.jobsToAdd))
+	}
 
 	// build the ids making sure they match
 	gotIds := GetIdsFromJobsList(rawJobs)
 	expectedIds := GetIdsFromJobsWithScheduleList(r.jobsToAdd)
-	r.Equal(gotIds, expectedIds)
+	if !reflect.DeepEqual(gotIds, expectedIds) {
+		t.Errorf("The retrieved jobs id is wrong. Got\n%+v\nExpected\n%+v\n", gotIds, expectedIds)
+	}
 
 	// retrieve them using GetAllJobsToExecute
 	jobs, err := r.repository.GetAllJobsToExecute()
-	r.Nil(err, "Cannot get jobsToAdd to execute")
-	r.Equal(len(jobs), len(r.jobsToAdd))
+	if err != nil {
+		t.Errorf("Cannot get the list of jobs to execute: %s\n", err.Error())
+	}
+	if len(jobs) != len(r.jobsToAdd) {
+		t.Errorf("The number of retrieved jobs to execute is wrong. Got %d, expected: %d", len(jobs), len(r.jobsToAdd))
+	}
 
 	gotIds = GetIdsFromJobsWithScheduleList(jobs)
-	r.Equal(gotIds, expectedIds)
+	if !reflect.DeepEqual(gotIds, expectedIds) {
+		t.Errorf("The expected ids are wrong. Got\n%+v\nExpected\n%+v\n", gotIds, expectedIds)
+	}
 
 	// retrieve one of them
 	job, err := r.repository.GetJob(r.jobsToAdd[0].job.ID)
-	r.Nil(err, "Cannot get single job")
+	if err != nil {
+		t.Errorf("Fail to retrieve single job: %s\n", err.Error())
+		t.FailNow()
+	}
 	// this check won't work because of time difference
 	// r.Equal(job.job, r.jobsToAdd[0].job)
 
 	// also, checking that the input has been correctly
 	// recovered
-	r.Equal(job.runInput, r.jobsToAdd[0].runInput)
+	if !reflect.DeepEqual(job.runInput, r.jobsToAdd[0].runInput) {
+		t.Errorf("The retrieved job is wrong. Got\n%+v\nExpected\n%+v\n", job.runInput, r.jobsToAdd[0].runInput)
+	}
 	// and now execute it
 	job.run.Run(job.runInput)
 	// making sure it has been executed
-	r.Equal(accessed[job.job.ID], r.jobsToAdd[0].runInput)
+	if !reflect.DeepEqual(accessed[job.job.ID], r.jobsToAdd[0].runInput) {
+		t.Errorf("The job has not been executed correctly. Got\n%+v\nExpected\n%+v\n", accessed[job.job.ID], r.jobsToAdd[0].runInput)
+	}
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
@@ -100,7 +120,7 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 	return res
 }
 
-func (r *RepositoryTestSuite) SetupTest() {
+func (r *RepositoryTestSuite) setup(t *testing.T) {
 	r.jobsToAdd = []JobWithSchedule{
 		{
 			job: Job{
@@ -118,7 +138,7 @@ func (r *RepositoryTestSuite) SetupTest() {
 					"hello": "is there anybody in there?",
 				},
 			},
-			schedule: scheduleNeverFail(r.Suite.T(), 30),
+			schedule: scheduleNeverFail(t, 30),
 		},
 		{
 			job: Job{
@@ -136,14 +156,16 @@ func (r *RepositoryTestSuite) SetupTest() {
 					"when I was a child": "I had fever",
 				},
 			},
-			schedule: scheduleNeverFail(r.Suite.T(), 60),
+			schedule: scheduleNeverFail(t, 60),
 		},
 	}
 }
 
-func (r *RepositoryTestSuite) TearDownTest() {
+func (r *RepositoryTestSuite) teardown(t *testing.T) {
 	err := r.repository.DeleteJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
-	r.Nil(err, "Fail to delete jobs on teardown")
+	if err != nil {
+		t.Errorf("Cannot delete jobs on teardown: %s\n", err.Error())
+	}
 }
 
 func TestRepositoryTestSuite(t *testing.T) {
@@ -156,6 +178,8 @@ func TestRepositoryTestSuite(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		suite.Run(t, test)
+		test.setup(t)
+		test.TestAddNoError(t)
+		test.teardown(t)
 	}
 }
