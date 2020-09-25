@@ -134,7 +134,7 @@ func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
 func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			result := tx.Model(&job).Update("cron_id", job.job.CronID)
+			result := tx.Model(&job.job).Update("cron_id", job.job.CronID)
 			if result.Error != nil {
 				return result.Error
 			}

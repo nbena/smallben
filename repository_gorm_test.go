@@ -62,10 +62,18 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	// retrieve them using GetRawByIds
 	rawJobs, err := r.repository.GetRawJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
-		t.Errorf("Cannot get raw jobsToAdd: %s\n", err.Error())
+		t.Errorf("Cannot get raw jobs from id: %s\n", err.Error())
 	}
 	if len(rawJobs) != len(r.jobsToAdd) {
 		t.Errorf("The number of retrieved test is wrong. Got %d, expected: %d\n", len(rawJobs), len(r.jobsToAdd))
+	}
+	// and also using GetJobsByIds
+	jobsWithSchedule, err := r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	if err != nil {
+		t.Errorf("Cannot get jobs from id: %s\n", err.Error())
+	}
+	if len(jobsWithSchedule) != len(r.jobsToAdd) {
+		t.Errorf("The number of retrieved test is wrong. Got %d, expected: %d\n", len(jobsWithSchedule), len(r.jobsToAdd))
 	}
 
 	// build the ids making sure they match
@@ -112,7 +120,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 }
 
 func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
-	// add the tests, this way we can pause them
+	// add the jobs, this way we can pause them
 	err := r.repository.AddJobs(r.jobsToAdd)
 	if err != nil {
 		t.Errorf("Fail to add jobs: %s\n", err.Error())
@@ -171,7 +179,39 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 		t.Errorf("Something went wrong during resume. Got\n%d\nExpected\n%d\n",
 			lenOfJobsToExecuteAfterResume, len(r.jobsToAdd))
 	}
+}
 
+func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
+	// first, add the jobs
+	err := r.repository.AddJobs(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	counter := int64(10)
+	// now, change the cron id
+	for i := range r.jobsToAdd {
+		r.jobsToAdd[i].job.CronID = counter
+		counter += 10
+	}
+
+	// now, save
+	err = r.repository.SetCronId(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Cannot change cron id: %s", err.Error())
+		t.FailNow()
+	}
+
+	// and retrieve
+	jobs, err := r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	counter = 0
+	for i, job := range jobs {
+		if job.job.CronID != counter+10 {
+			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.job.CronID, int64(i+10))
+		}
+		counter += 10
+	}
 }
 
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
@@ -258,6 +298,16 @@ func TestRepositoryPauseResume(t *testing.T) {
 	for _, test := range tests {
 		test.setup(t)
 		test.TestPauseJobs(t)
+		test.teardown(t)
+	}
+}
+
+func TestRepositoryCronId(t *testing.T) {
+	tests := buildRepositoryTestSuite(t)
+
+	for _, test := range tests {
+		test.setup(t)
+		test.TestCronId(t)
 		test.teardown(t)
 	}
 }
