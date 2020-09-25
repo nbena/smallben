@@ -171,7 +171,7 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 	// re-grab the number of jobs
 	jobsToExecuteAfterResume, err := r.repository.GetAllJobsToExecute()
 	if err != nil {
-		t.Errorf("Fail to get all jobs to execute after resume")
+		t.Errorf("Fail to get all jobs to execute after resume: %s\n", err.Error())
 		t.FailNow()
 	}
 	lenOfJobsToExecuteAfterResume := len(jobsToExecuteAfterResume)

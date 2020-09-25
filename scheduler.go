@@ -19,15 +19,15 @@ func NewScheduler() Scheduler {
 // the input array with the `CronID`.
 func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 
-	for _, job := range jobs {
-		runFunc := job.run
-		runFuncInput := job.runInput
+	for i := range jobs {
+		runFunc := jobs[i].run
+		runFuncInput := jobs[i].runInput
 
-		entryID := s.cron.Schedule(job.schedule, cron.FuncJob(func() {
+		entryID := s.cron.Schedule(jobs[i].schedule, cron.FuncJob(func() {
 			runFunc.Run(runFuncInput)
 		}))
 
-		job.job.CronID = int64(entryID)
+		jobs[i].job.CronID = int64(entryID)
 	}
 }
 
