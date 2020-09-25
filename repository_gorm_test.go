@@ -251,7 +251,8 @@ func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
 
 func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	notExisting := Job{
-		ID: 1000,
+		ID:     1000,
+		CronID: 10000,
 	}
 
 	// get with just one
@@ -273,6 +274,10 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	// resume
 	err = r.repository.ResumeJobs([]JobWithSchedule{{job: notExisting}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Resume", t)
+
+	// set cron id
+	err = r.repository.SetCronId([]JobWithSchedule{{job: notExisting}})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronId", t)
 
 }
 
