@@ -240,6 +240,15 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 }
 
+func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
+	if err == nil {
+		t.Errorf("%s error expected. Should have been not nil.\n", msg)
+	}
+	if !errors.Is(err, expected) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+}
+
 func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	notExisting := Job{
 		ID: 1000,
@@ -247,48 +256,23 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 
 	// get with just one
 	_, err := r.repository.GetJob(1000)
-	if err == nil {
-		t.Error("GetJob error expected. Should have been not nil.\n")
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Errorf("Error is of wrong type: %s\n", err.Error())
-	}
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJob", t)
 
 	// get with many
 	_, err = r.repository.GetJobsByIdS([]int64{10000})
-	if err == nil {
-		t.Error("GetJobs error expected. Should have been not nil.\n")
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Errorf("Error is of wrong type: %s\n", err.Error())
-	}
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJobs", t)
 
 	// get with many -- raw
 	_, err = r.repository.GetRawJobsByIds([]int64{10000})
-	if err == nil {
-		t.Error("GetRawJobs error expected. Should have been not nil.\n")
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Errorf("Error is of wrong type: %s\n", err.Error())
-	}
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetRawJobs", t)
 
 	// pause
 	err = r.repository.PauseJobs([]Job{notExisting})
-	if err == nil {
-		t.Error("Pause error expected. Should have been not nil.\n")
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Errorf("Error is of wrong type: %s\n", err.Error())
-	}
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Pause", t)
 
 	// resume
 	err = r.repository.ResumeJobs([]JobWithSchedule{{job: notExisting}})
-	if err == nil {
-		t.Error("Resume error expected. Should have been not nil.\n")
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		t.Errorf("Error is of wrong type: %s\n", err.Error())
-	}
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Resume", t)
 
 }
 
