@@ -3,47 +3,25 @@ package smallben
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/stretchr/testify/suite"
+	"reflect"
 	"testing"
 	"time"
 )
-
-type jobFromRawTest struct {
-	rawJobs     Job
-	expectedJob JobWithSchedule
-}
-
-type JobFromRawTestSuite struct {
-	suite.Suite
-	raw      []Job
-	expected []JobWithSchedule
-}
-
-func (s *JobFromRawTestSuite) TestToJobWithSchedule() {
-	for i, raw := range s.raw {
-		built, err := raw.ToJobWithSchedule()
-		s.Nil(err)
-		s.Equal(s.expected[i], built)
-	}
-}
 
 type jobToRawTest struct {
 	withSchedule JobWithSchedule
 	expectedRaw  Job
 }
 
-// Test the BuildJob() method
-type JobToRawTestSuite struct {
-	suite.Suite
-	pairs []jobToRawTest
-}
-
-func (j *JobToRawTestSuite) TestToRaw() {
-	for _, test := range j.pairs {
-		rawBuilt, err := test.withSchedule.BuildJob()
-		j.Nil(err)
-		j.Equal(test.expectedRaw, rawBuilt)
+func (j *jobToRawTest) TestToRaw(t *testing.T) {
+	rawBuilt, err := j.withSchedule.BuildJob()
+	if err != nil {
+		t.Errorf("Cannot build Job from JobWithSchedule")
 	}
+	if !reflect.DeepEqual(j.expectedRaw, rawBuilt) {
+		t.Errorf("The build test is wrong. Got\n%+v\nExpected\n%+v\n", rawBuilt, j.expectedRaw)
+	}
+
 }
 
 func interfaceEncode(t *testing.T, encoder *gob.Encoder, job CronJob) {
@@ -54,8 +32,6 @@ func interfaceEncode(t *testing.T, encoder *gob.Encoder, job CronJob) {
 }
 
 func TestJobToRaw(t *testing.T) {
-	testSuite := new(JobToRawTestSuite)
-
 	now := time.Now()
 
 	var bufferJob1 bytes.Buffer
@@ -116,8 +92,10 @@ func TestJobToRaw(t *testing.T) {
 			},
 		},
 	}
-	testSuite.pairs = pairs
-	suite.Run(t, testSuite)
+
+	for _, pair := range pairs {
+		pair.TestToRaw(t)
+	}
 }
 
 //func TestJobFromRaw(t *testing.T){
