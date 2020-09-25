@@ -2,6 +2,7 @@ package smallben
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"gorm.io/driver/postgres"
@@ -239,6 +240,20 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 }
 
+func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
+	notExisting := Job{
+		ID: 1000,
+	}
+
+	err := r.repository.PauseJobs([]Job{notExisting})
+	if err == nil {
+		t.Error("Pause error expected. Should have been not nil.\n")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("Error is of wrong type: %s\n", err.Error())
+	}
+}
+
 func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 	res, err := cron.ParseStandard(fmt.Sprintf("@every %ds", seconds))
 	if err != nil {
@@ -289,10 +304,12 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 	}
 }
 
-func (r *RepositoryTestSuite) teardown(t *testing.T) {
+func (r *RepositoryTestSuite) teardown(okNotFound bool, t *testing.T) {
 	err := r.repository.DeleteJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
-		t.Errorf("Cannot delete jobs on teardown: %s\n", err.Error())
+		if !(okNotFound && errors.Is(err, gorm.ErrRecordNotFound)) {
+			t.Errorf("Cannot delete jobs on teardown: %s\n", err.Error())
+		}
 	}
 }
 
@@ -313,7 +330,7 @@ func TestRepositoryAddTestSuite(t *testing.T) {
 	for _, test := range tests {
 		test.setup(t)
 		test.TestAddNoError(t)
-		test.teardown(t)
+		test.teardown(false, t)
 	}
 }
 
@@ -323,7 +340,7 @@ func TestRepositoryPauseResume(t *testing.T) {
 	for _, test := range tests {
 		test.setup(t)
 		test.TestPauseJobs(t)
-		test.teardown(t)
+		test.teardown(false, t)
 	}
 }
 
@@ -333,6 +350,16 @@ func TestRepositoryCronId(t *testing.T) {
 	for _, test := range tests {
 		test.setup(t)
 		test.TestCronId(t)
-		test.teardown(t)
+		test.teardown(false, t)
+	}
+}
+
+func TestRepositoryError(t *testing.T) {
+	tests := buildRepositoryTestSuite(t)
+
+	for _, test := range tests {
+		test.setup(t)
+		test.TestPauseJobNotExisting(t)
+		test.teardown(true, t)
 	}
 }
