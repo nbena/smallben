@@ -127,11 +127,6 @@ type JobWithSchedule struct {
 	runInput CronJobInput
 }
 
-// Schedule returns the schedule used by this object.
-func (j *JobWithSchedule) Schedule() *cron.Schedule {
-	return &j.schedule
-}
-
 // ToJobWithSchedule returns a JobWithSchedule object from the current RawJob,
 // by copy. It returns errors in case the given schedule is not valid,
 // or in case the conversion of the rawJob interface/input fails.
@@ -175,10 +170,6 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 		runInput: runJobInput,
 	}
 	return result, nil
-}
-
-func (j *RawJob) schedule() (cron.Schedule, error) {
-	return cron.ParseStandard(fmt.Sprintf("@every %ds", j.EverySecond))
 }
 
 func encodeJob(encoder *gob.Encoder, job CronJob) error {
