@@ -231,10 +231,9 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		// job is a copy of the original job
 		// so it is safe to modify it.
 		newJobRaw := job.rawJob
-		// replace the new interval
 		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
-		// build the cron.Schedule object from it
-		newSchedule, err := newJobRaw.schedule()
+		// build the cron.Schedule object from
+		newSchedule, err := scheduleInfo[i].schedule()
 		if err != nil {
 			return err
 		}

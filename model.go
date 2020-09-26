@@ -242,7 +242,7 @@ type UpdateSchedule struct {
 }
 
 func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
-	return cron.ParseStandard(fmt.Sprintf("@every {%d}s", u.EverySecond))
+	return cron.ParseStandard(fmt.Sprintf("@every %ds", u.EverySecond))
 }
 
 // GetIdsFromUpdateScheduleList basically does schedules.map(rawJob -> rawJob.id)
