@@ -304,6 +304,16 @@ func (s *SmallBenTestSuite) TestOther(t *testing.T) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Errorf("The error is of unexpected type: %s\n", err.Error())
 	}
+
+	// now we even test a wrong connection.
+	wrongConfig := Config{
+		DbDialector: postgres.Open(""),
+		DbConfig:    gorm.Config{},
+	}
+	_, err = NewSmallBen(&wrongConfig)
+	if err == nil {
+		t.Errorf("An empty connection has been accepted")
+	}
 }
 
 func (s *SmallBenTestSuite) setup() {
