@@ -265,6 +265,40 @@ func (s *SmallBenTestSuite) TestOther(t *testing.T) {
 		t.Errorf("Cannot re-restart: %s\n", err.Error())
 		t.FailNow()
 	}
+
+	// now, let's add jobs once again, making sure we trigger an error.
+	err = s.smallBen.AddJobs(s.jobs)
+	if err == nil {
+		t.Errorf("AddJobs should have triggered an error but it didn't\n")
+	}
+
+	// now, let's delete a job that does not exist.
+	err = s.smallBen.DeleteJobs([]int64{10000})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+
+	// same for pause
+	err = s.smallBen.PauseJobs([]int64{10000})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+
+	// same for resume
+	err = s.smallBen.ResumeJobs([]int64{10000})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+
+	// same for update
+	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
+		{JobID: 10000,
+			EverySecond: 1,
+		}})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+
+	// new, let's require a non-valid schedule
+	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
+		{JobID: s.jobs[0].ID,
+			EverySecond: -10,
+		}})
+	if err == nil {
+		t.Errorf("A wrong schedule has been accepted")
+	}
 }
 
 func (s *SmallBenTestSuite) setup() {
