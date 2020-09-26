@@ -130,6 +130,7 @@ type JobWithSchedule struct {
 // ToJobWithSchedule returns a JobWithSchedule object from the current RawJob,
 // by copy. It returns errors in case the given schedule is not valid,
 // or in case the conversion of the rawJob interface/input fails.
+// It does NOT copy the byte arrays from j.
 func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
 	// decode the schedule
