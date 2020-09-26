@@ -161,6 +161,20 @@ func TestJobFromRawWithError(t *testing.T) {
 	raw.SerializedJob = jobSerialized
 	_, err = raw.ToJobWithSchedule()
 	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
+
+	raw.CronExpression = "not a valid cron expression"
+	_, err = raw.ToJobWithSchedule()
+	if err == nil {
+		t.Errorf("An invalid schedule has been accepted")
+	}
+
+	job := Job{
+		CronExpression: "not a valid cron expression",
+	}
+	_, err = job.toJobWithSchedule()
+	if err == nil {
+		t.Errorf("An invalid schedule has been accepted")
+	}
 }
 
 func TestJobFromRaw(t *testing.T) {
