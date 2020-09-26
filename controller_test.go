@@ -60,7 +60,7 @@ func NewSmallBenTestSuite(dialector gorm.Dialector, t *testing.T) *SmallBenTestS
 	return s
 }
 
-func (s *SmallBenTestSuite) TestSmallBen(t *testing.T) {
+func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 
 	// first and foremost, let's start the
 	// SmallBen
@@ -98,6 +98,42 @@ func (s *SmallBenTestSuite) TestSmallBen(t *testing.T) {
 	}
 	if len(jobs) != len(s.jobs) {
 		t.Errorf("Some jobs have not been added to the db. Got: %d Expected %d\n", len(jobs), len(s.jobs))
+	}
+}
+
+func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
+
+	// first and foremost, let's start the
+	// SmallBen
+	err := s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot even start: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// add the jobs
+	// let's add the jobs
+	err = s.smallBen.AddJobs(s.jobs)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	lenOfJobsBeforeAnything := len(s.smallBen.scheduler.cron.Entries())
+
+	// now pause the first job
+	jobIDToPause := s.jobs[0].ID
+	err = s.smallBen.PauseJobs([]int64{jobIDToPause})
+	if err != nil {
+		t.Errorf("Fail to pause job: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// make sure the number of entries have been decreased by one
+	lenOfJobsAfterFirstPause := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsBeforeAnything != lenOfJobsAfterFirstPause+1 {
+		t.Errorf("Something went wrong after pause. Got: %d Expected: %d",
+			lenOfJobsAfterFirstPause, lenOfJobsAfterFirstPause-1)
 	}
 }
 
@@ -151,6 +187,7 @@ func (s *SmallBenTestSuite) teardown(okNotFound bool, t *testing.T) {
 			t.Errorf("Fail to delete: %s", err.Error())
 		}
 	}
+	s.smallBen.Stop()
 }
 
 func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
@@ -164,12 +201,22 @@ func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
 	return tests
 }
 
-func TestSmallBen(t *testing.T) {
+func TestSmallBenAdd(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
 		test.setup(t)
-		test.TestSmallBen(t)
+		test.TestAddDelete(t)
 		test.teardown(false, t)
+	}
+}
+
+func TestSmallBenPauseResume(t *testing.T) {
+	tests := buildSmallBenTestSuite(t)
+
+	for _, test := range tests {
+		test.setup(t)
+		test.TestPauseResume(t)
+		test.teardown(true, t)
 	}
 }

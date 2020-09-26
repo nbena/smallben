@@ -117,7 +117,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.scheduler.AddJobs(jobsWithSchedule)
 	// now, store them in the database
 	if err := s.repository.AddJobs(jobsWithSchedule); err != nil {
-		// in case of errors, we remove all those jobsToAdd from the scheduler
+		// in case of errors, we remove all those jobs from the scheduler
 		s.scheduler.DeleteJobsWithSchedule(jobsWithSchedule)
 		return err
 	}
@@ -129,7 +129,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobsToAdd
+	// grab the jobs
 	// we need to know the cron id
 	tests, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
@@ -152,7 +152,7 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 func (s *SmallBen) PauseJobs(jobsID []int64) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobsToAdd
+	// grab the jobs
 	// we need to know the cron id
 	jobs, err := s.repository.GetRawJobsByIds(jobsID)
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 		}
 	}
 
-	// ok, now we mark those jobsToAdd as resumed
+	// ok, now we mark those jobs as resumed
 	if err = s.repository.ResumeJobs(finalJobs); err != nil {
 		return err
 	}
@@ -217,17 +217,16 @@ func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// first, we grab all the jobsWithScheduleOld
+	// first, we grab all the jobs
 	jobsWithScheduleOld, err := s.repository.GetJobsByIdS(GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
 		return err
 	}
 
-	// the jobsWithScheduleOld with the new required schedule
 	jobsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
 
 	// compute the new schedule
-	// for the required jobsToAdd
+	// for the required jobs
 	for i, job := range jobsWithScheduleOld {
 		newJobRaw := job.job
 		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
