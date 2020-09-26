@@ -40,16 +40,15 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 	}
 
 	// make sure they have been executed, so we
-	// have to wait.
-	maxTimeToWait := int64(0)
+	// compute the expected sum
+	// it is the lower bound
 	expectedSum := 0
 	for _, job := range s.jobs {
-		maxTimeToWait += job.rawJob.EverySecond
 		expectedSum += job.runInput.OtherInputs["counter"].(int)
 	}
 
 	// sleep fot the necessary time.
-	time.Sleep(time.Duration(maxTimeToWait) * time.Second)
+	time.Sleep(2 * time.Second)
 	lockMap.lock.Lock()
 	if lockMap.counter < expectedSum {
 		t.Errorf("The counter has not been incremented properly. Got: %d Expected: %d\n",
@@ -93,7 +92,7 @@ func (s *SchedulerTestSuite) setup() {
 				GroupID:            1,
 				SuperGroupID:       1,
 				CronID:             0,
-				EverySecond:        1,
+				CronExpression:     "@every 1s",
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),
@@ -117,7 +116,7 @@ func (s *SchedulerTestSuite) setup() {
 				GroupID:            1,
 				SuperGroupID:       1,
 				CronID:             0,
-				EverySecond:        1,
+				CronExpression:     "@every 1s",
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),
@@ -141,7 +140,7 @@ func (s *SchedulerTestSuite) setup() {
 				GroupID:            1,
 				SuperGroupID:       1,
 				CronID:             0,
-				EverySecond:        1,
+				CronExpression:     "@every 1s",
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),

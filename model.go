@@ -3,7 +3,6 @@ package smallben
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"github.com/robfig/cron/v3"
 	"time"
 )
@@ -33,8 +32,8 @@ type Job struct {
 	// CronID is the ID of the cron rawJob as assigned by the scheduler
 	// internally.
 	CronID int64
-	// EverySecond specifies every how many seconds the rawJob will run.
-	EverySecond int64
+	// CronExpression specifies the scheduling of the job.
+	CronExpression string
 	// Paused specifies whether this rawJob has been paused.
 	Paused bool
 	// createdAt specifies when this rawJob has been created.
@@ -52,21 +51,21 @@ type Job struct {
 func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
 	// decode the schedule
-	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", j.EverySecond))
+	schedule, err := cron.ParseStandard(j.CronExpression)
 	if err != nil {
 		return result, err
 	}
 
 	result = JobWithSchedule{
 		rawJob: RawJob{
-			ID:           j.ID,
-			GroupID:      j.GroupID,
-			SuperGroupID: j.SuperGroupID,
-			CronID:       0,
-			EverySecond:  j.EverySecond,
-			Paused:       false,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:             j.ID,
+			GroupID:        j.GroupID,
+			SuperGroupID:   j.SuperGroupID,
+			CronID:         0,
+			CronExpression: j.CronExpression,
+			Paused:         false,
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
 		},
 		schedule: schedule,
 		run:      j.Job,
@@ -93,8 +92,8 @@ type RawJob struct {
 	// CronID is the ID of the cron rawJob as assigned by the scheduler
 	// internally.
 	CronID int64 `gorm:"column:cron_id"`
-	// EverySecond specifies every how many seconds the rawJob will run.
-	EverySecond int64 `gorm:"column:every_second"`
+	// CronExpression specifies the scheduling of the job.
+	CronExpression string `gorm:"column:cron_expression"`
 	// Paused specifies whether this rawJob has been paused.
 	Paused bool `gorm:"column:paused"`
 	// CreatedAt specifies when this rawJob has been created.
@@ -134,7 +133,7 @@ type JobWithSchedule struct {
 func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
 	// decode the schedule
-	schedule, err := cron.ParseStandard(fmt.Sprintf("@every %ds", j.EverySecond))
+	schedule, err := cron.ParseStandard(j.CronExpression)
 	if err != nil {
 		return result, err
 	}
@@ -157,14 +156,14 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 
 	result = JobWithSchedule{
 		rawJob: RawJob{
-			ID:           j.ID,
-			GroupID:      j.GroupID,
-			SuperGroupID: j.SuperGroupID,
-			CronID:       j.CronID,
-			EverySecond:  j.EverySecond,
-			Paused:       j.Paused,
-			CreatedAt:    j.CreatedAt,
-			UpdatedAt:    j.UpdatedAt,
+			ID:             j.ID,
+			GroupID:        j.GroupID,
+			SuperGroupID:   j.SuperGroupID,
+			CronID:         j.CronID,
+			CronExpression: j.CronExpression,
+			Paused:         j.Paused,
+			CreatedAt:      j.CreatedAt,
+			UpdatedAt:      j.UpdatedAt,
 		},
 		schedule: schedule,
 		run:      runJob,
@@ -228,12 +227,12 @@ func GetIdsFromJobList(jobs []Job) []int64 {
 type UpdateSchedule struct {
 	// JobID is the ID of the tests
 	JobID int64
-	// EverySecond is the new schedule
-	EverySecond int64
+	// CronExpression is the new schedule
+	CronExpression string
 }
 
 func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
-	return cron.ParseStandard(fmt.Sprintf("@every %ds", u.EverySecond))
+	return cron.ParseStandard(u.CronExpression)
 }
 
 // GetIdsFromUpdateScheduleList basically does schedules.map(rawJob -> rawJob.id)

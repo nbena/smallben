@@ -185,8 +185,8 @@ func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
 
 	// now change the schedule
 	schedule := UpdateSchedule{
-		JobID:       s.jobs[0].ID,
-		EverySecond: 120,
+		JobID:          s.jobs[0].ID,
+		CronExpression: "@every 120s",
 	}
 
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{schedule})
@@ -304,16 +304,14 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	// same for update
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
 		{JobID: 10000,
-			EverySecond: 1,
+			CronExpression: "@every 1s",
 		}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// new, let's require a non-valid schedule
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
 		{JobID: s.jobs[0].ID,
-			// it is not validated by cron
-			// but by the database constraint
-			EverySecond: -10,
+			CronExpression: "not valid expression",
 		}})
 	if err == nil {
 		t.Errorf("A wrong schedule has been accepted")
@@ -336,38 +334,38 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 func (s *SmallBenTestSuite) setup() {
 	jobs := []Job{
 		{
-			ID:           1,
-			GroupID:      1,
-			SuperGroupID: 1,
-			EverySecond:  70,
-			Job:          &SmallBenCronJob{},
+			ID:             1,
+			GroupID:        1,
+			SuperGroupID:   1,
+			CronExpression: "@every 70s",
+			Job:            &SmallBenCronJob{},
 			JobInput: map[string]interface{}{
 				"test_id": 1,
 			},
 		}, {
-			ID:           2,
-			GroupID:      1,
-			SuperGroupID: 1,
-			EverySecond:  62,
-			Job:          &SmallBenCronJob{},
+			ID:             2,
+			GroupID:        1,
+			SuperGroupID:   1,
+			CronExpression: "@every 62s",
+			Job:            &SmallBenCronJob{},
 			JobInput: map[string]interface{}{
 				"test_id": 2,
 			},
 		}, {
-			ID:           3,
-			GroupID:      2,
-			SuperGroupID: 1,
-			EverySecond:  61,
-			Job:          &SmallBenCronJob{},
+			ID:             3,
+			GroupID:        2,
+			SuperGroupID:   1,
+			CronExpression: "@every 61s",
+			Job:            &SmallBenCronJob{},
 			JobInput: map[string]interface{}{
 				"test_id": 3,
 			},
 		}, {
-			ID:           4,
-			GroupID:      2,
-			SuperGroupID: 2,
-			EverySecond:  60,
-			Job:          &SmallBenCronJob{},
+			ID:             4,
+			GroupID:        2,
+			SuperGroupID:   2,
+			CronExpression: "@every 60s",
+			Job:            &SmallBenCronJob{},
 			JobInput: map[string]interface{}{
 				"test_id": 4,
 			},

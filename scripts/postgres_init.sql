@@ -7,9 +7,9 @@ create table if not exists jobs (
     super_group_id integer not null,
     -- set to true if you want to pause this test
     paused boolean not null default false,
-    -- with an integer we can support intervals
-    -- up to 2 years, so it's fine
-    every_second integer not null check(every_second >= 60),
+    -- cron expression deciding the scheduling of this
+    -- job
+    cron_expression varchar(256) not null,
     -- id of the cron entry
     cron_id integer not null default 0,
     -- serialized job using gob

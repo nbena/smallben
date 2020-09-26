@@ -52,9 +52,9 @@ func (j *jobFromRawTest) TestFromRaw(t *testing.T) {
 		t.Errorf("CronID is different. Got: %d, expected: %d\n",
 			withScheduleBuilt.rawJob.CronID, j.expectedWithSchedule.rawJob.CronID)
 	}
-	if withScheduleBuilt.rawJob.EverySecond != j.expectedWithSchedule.rawJob.EverySecond {
-		t.Errorf("EverySecond is different. Got: %d, expected: %d\n",
-			withScheduleBuilt.rawJob.EverySecond, j.expectedWithSchedule.rawJob.EverySecond)
+	if withScheduleBuilt.rawJob.CronExpression != j.expectedWithSchedule.rawJob.CronExpression {
+		t.Errorf("CronExpression is different. Got: %s, expected: %s\n",
+			withScheduleBuilt.rawJob.CronExpression, j.expectedWithSchedule.rawJob.CronExpression)
 	}
 	if withScheduleBuilt.rawJob.Paused != j.expectedWithSchedule.rawJob.Paused {
 		t.Errorf("Paused is different. Got: %v, expected: %v\n",
@@ -103,7 +103,7 @@ func TestJobToRaw(t *testing.T) {
 					GroupID:            1,
 					SuperGroupID:       1,
 					CronID:             1,
-					EverySecond:        20,
+					CronExpression:     "@every 20s",
 					Paused:             false,
 					CreatedAt:          now,
 					UpdatedAt:          now,
@@ -126,7 +126,7 @@ func TestJobToRaw(t *testing.T) {
 				GroupID:            1,
 				SuperGroupID:       1,
 				CronID:             1,
-				EverySecond:        20,
+				CronExpression:     "@every 20s",
 				Paused:             false,
 				CreatedAt:          now,
 				UpdatedAt:          now,
@@ -143,6 +143,7 @@ func TestJobToRaw(t *testing.T) {
 
 func TestJobFromRawWithError(t *testing.T) {
 	raw := RawJob{
+		CronExpression:     "@every 1s",
 		SerializedJob:      nil,
 		SerializedJobInput: nil,
 	}
@@ -183,7 +184,7 @@ func TestJobFromRaw(t *testing.T) {
 				GroupID:            1,
 				SuperGroupID:       1,
 				CronID:             1,
-				EverySecond:        1,
+				CronExpression:     "@every 1s",
 				Paused:             false,
 				CreatedAt:          now,
 				UpdatedAt:          now,
@@ -196,7 +197,7 @@ func TestJobFromRaw(t *testing.T) {
 					GroupID:            1,
 					SuperGroupID:       1,
 					CronID:             1,
-					EverySecond:        1,
+					CronExpression:     "@every 1s",
 					Paused:             false,
 					CreatedAt:          now,
 					UpdatedAt:          now,

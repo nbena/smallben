@@ -91,7 +91,7 @@ package smallben
 //func (r *RepositoryOtherTestSuite) TestChangeSchedule() {
 //	// grab a test to update
 //	test := r.tests[0]
-//	test.EverySecond += 50
+//	test.CronExpression += 50
 //
 //	// create the array of tests
 //	tests := []JobWithSchedule{{
@@ -103,7 +103,7 @@ package smallben
 //	newTest, err := r.repository.GetJob(ctx, test.ID)
 //	r.Nil(err, "Cannot retrieve rule")
 //
-//	r.Equal(newTest.EverySecond, test.EverySecond, "Update failed")
+//	r.Equal(newTest.CronExpression, test.CronExpression, "Update failed")
 //}
 //
 //func (r *RepositoryOtherTestSuite) TestSetCronId() {
@@ -207,13 +207,13 @@ package smallben
 //	tests := []RawJob{
 //		{
 //			ID:           2,
-//			EverySecond:  60,
+//			CronExpression:  60,
 //			SuperGroupID: 1,
 //			GroupID:      1,
 //			Paused:       false,
 //		}, {
 //			ID:           3,
-//			EverySecond:  120,
+//			CronExpression:  120,
 //			SuperGroupID: 1,
 //			GroupID:      1,
 //			Paused:       false,

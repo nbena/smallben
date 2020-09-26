@@ -231,7 +231,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		// job is a copy of the original job
 		// so it is safe to modify it.
 		newJobRaw := job.rawJob
-		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
+		newJobRaw.CronExpression = scheduleInfo[i].CronExpression
 		// build the cron.Schedule object from
 		newSchedule, err := scheduleInfo[i].schedule()
 		if err != nil {

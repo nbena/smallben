@@ -215,12 +215,12 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 
 	newCronID := int64(100)
-	newSchedule := int64(100)
+	newSchedule := "@every 100s"
 
 	// now we do the same, but we also change the schedule
 	for i := range r.jobsToAdd {
 		r.jobsToAdd[i].rawJob.CronID = newCronID
-		r.jobsToAdd[i].rawJob.EverySecond = newSchedule
+		r.jobsToAdd[i].rawJob.CronExpression = newSchedule
 	}
 
 	err = r.repository.SetCronIdAndChangeSchedule(r.jobsToAdd)
@@ -234,8 +234,8 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 		if job.rawJob.CronID != newCronID {
 			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.rawJob.CronID, newCronID)
 		}
-		if job.rawJob.EverySecond != newSchedule {
-			t.Errorf("Schedule not changed. Got: %d Expected: %d\n", job.rawJob.EverySecond, newSchedule)
+		if job.rawJob.CronExpression != newSchedule {
+			t.Errorf("Schedule not changed. Got: %s Expected: %s\n", job.rawJob.CronExpression, newSchedule)
 		}
 	}
 }
@@ -298,10 +298,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 	r.jobsToAdd = []JobWithSchedule{
 		{
 			rawJob: RawJob{
-				ID:           1,
-				GroupID:      1,
-				SuperGroupID: 1,
-				EverySecond:  60,
+				ID:             1,
+				GroupID:        1,
+				SuperGroupID:   1,
+				CronExpression: "@every 60s",
 			},
 			run: &TestCronJob{},
 			runInput: CronJobInput{
@@ -316,10 +316,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 		},
 		{
 			rawJob: RawJob{
-				ID:           2,
-				GroupID:      1,
-				SuperGroupID: 1,
-				EverySecond:  120,
+				ID:             2,
+				GroupID:        1,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
 			},
 			run: &TestCronJob{},
 			runInput: CronJobInput{

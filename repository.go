@@ -139,7 +139,7 @@ package smallben
 ////		tests,
 ////		func(test *RawJob, batch *pgx.Batch) {
 ////			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
-////				test.ID, test.EverySecond, time.Now())
+////				test.ID, test.CronExpression, time.Now())
 ////		})
 ////}
 //
@@ -155,7 +155,7 @@ package smallben
 ////		rawTests,
 ////		func(test *RawJob, batch *pgx.Batch) {
 ////			batch.Queue("update tests set every_second = $2, updated_at = $3 where id = $1",
-////				test.ID, test.EverySecond, time.Now())
+////				test.ID, test.CronExpression, time.Now())
 ////		})
 ////}
 //
@@ -175,7 +175,7 @@ package smallben
 //	)
 //}
 //
-//// SetCronIdAndChangeSchedule updates the `CronID` and the `EverySecond` field (and the `UpdatedAt`).
+//// SetCronIdAndChangeSchedule updates the `CronID` and the `CronExpression` field (and the `UpdatedAt`).
 //func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, jobsToAdd []JobWithSchedule) error {
 //	rawTests := make([]RawJob, len(jobsToAdd))
 //	for i, test := range jobsToAdd {
@@ -186,7 +186,7 @@ package smallben
 //		rawTests,
 //		func(test *RawJob, batch *pgx.Batch) {
 //			batch.Queue("update jobsToAdd set cron_id = $2, every_second = $3 updated_at = $4 where id = $1",
-//				test.ID, test.CronID, test.EverySecond, time.Now())
+//				test.ID, test.CronID, test.CronExpression, time.Now())
 //		},
 //	)
 //}
