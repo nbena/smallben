@@ -265,6 +265,23 @@ func (s *SmallBenTestSuite) TestOther(t *testing.T) {
 		t.Errorf("Cannot re-restart: %s\n", err.Error())
 		t.FailNow()
 	}
+}
+
+func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
+
+	// let's start the scheduler.
+	err := s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot even start: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// add a buck of jobs
+	err = s.smallBen.AddJobs(s.jobs)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
 
 	// now, let's add jobs once again, making sure we trigger an error.
 	err = s.smallBen.AddJobs(s.jobs)
@@ -416,6 +433,16 @@ func TestSmallBenOther(t *testing.T) {
 	for _, test := range tests {
 		test.setup()
 		test.TestOther(t)
+		test.teardown(true, t)
+	}
+}
+
+func TestSmallBenError(t *testing.T) {
+	tests := buildSmallBenTestSuite(t)
+
+	for _, test := range tests {
+		test.setup()
+		test.TestErrors(t)
 		test.teardown(true, t)
 	}
 }
