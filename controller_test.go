@@ -135,6 +135,21 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 		t.Errorf("Something went wrong after pause. Got: %d Expected: %d",
 			lenOfJobsAfterFirstPause, lenOfJobsAfterFirstPause-1)
 	}
+
+	// now, resume it.
+	err = s.smallBen.ResumeJobs([]int64{jobIDToPause})
+	if err != nil {
+		t.Errorf("Fail to resume job: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// check that the entries have been increased by one
+	// matching the old number of entries
+	lenOfJobsAfterResume := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsAfterResume != lenOfJobsBeforeAnything || lenOfJobsAfterResume != lenOfJobsAfterFirstPause+1 {
+		t.Errorf("Something went wrong after resume. Got %d: Expected :%d",
+			lenOfJobsAfterResume, lenOfJobsBeforeAnything)
+	}
 }
 
 func (s *SmallBenTestSuite) setup(t *testing.T) {
