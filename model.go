@@ -173,6 +173,8 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	return result, nil
 }
 
+// Encode `job`. A separate function is needed because we need to pass
+// a POINTER to interface.
 func encodeJob(encoder *gob.Encoder, job CronJob) error {
 	return encoder.Encode(&job)
 }
@@ -182,9 +184,6 @@ func encodeJob(encoder *gob.Encoder, job CronJob) error {
 func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-	// if err := encoder.Encode(&j.run); err != nil {
-	//	return RawJob{}, err
-	// }
 	if err := encodeJob(encoder, j.run); err != nil {
 		return RawJob{}, err
 	}
