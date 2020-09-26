@@ -217,6 +217,56 @@ func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
 	}
 }
 
+func (s *SmallBenTestSuite) TestOther(t *testing.T) {
+
+	// let's start the scheduler.
+	err := s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot even start: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// add a buck of jobs
+	err = s.smallBen.AddJobs(s.jobs)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// pause one of them
+	err = s.smallBen.PauseJobs([]int64{s.jobs[0].ID})
+	if err != nil {
+		t.Errorf("Fail to pause jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	lenOfJobsAfterPause := len(s.smallBen.scheduler.cron.Entries())
+
+	// now, let's stop it.
+	s.smallBen.Stop()
+
+	// now, let's start it once again
+	// to test the Fill method
+	err = s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot restart: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	lenOfJobsAfterRestart := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsAfterRestart != lenOfJobsAfterPause {
+		t.Errorf("Fill does not work properly. Got: %d Expected: %d\n",
+			lenOfJobsAfterRestart, lenOfJobsAfterPause)
+	}
+
+	// now, let's start it once again to make sure nothing bad happens
+	err = s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot re-restart: %s\n", err.Error())
+		t.FailNow()
+	}
+}
+
 func (s *SmallBenTestSuite) setup() {
 	jobs := []Job{
 		{
@@ -307,6 +357,16 @@ func TestSmallBenChangeSchedule(t *testing.T) {
 	for _, test := range tests {
 		test.setup()
 		test.TestChangeSchedule(t)
+		test.teardown(true, t)
+	}
+}
+
+func TestSmallBenOther(t *testing.T) {
+	tests := buildSmallBenTestSuite(t)
+
+	for _, test := range tests {
+		test.setup()
+		test.TestOther(t)
 		test.teardown(true, t)
 	}
 }
