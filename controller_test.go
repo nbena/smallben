@@ -294,10 +294,15 @@ func (s *SmallBenTestSuite) TestOther(t *testing.T) {
 	// new, let's require a non-valid schedule
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
 		{JobID: s.jobs[0].ID,
+			// it is not validated by cron
+			// but by the database constraint
 			EverySecond: -10,
 		}})
 	if err == nil {
 		t.Errorf("A wrong schedule has been accepted")
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("The error is of unexpected type: %s\n", err.Error())
 	}
 }
 
