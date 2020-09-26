@@ -3,6 +3,7 @@ package smallben
 import (
 	"bytes"
 	"encoding/gob"
+	"io"
 	"reflect"
 	"testing"
 	"time"
@@ -138,6 +139,27 @@ func TestJobToRaw(t *testing.T) {
 	for _, pair := range pairs {
 		pair.TestToRaw(t)
 	}
+}
+
+func TestJobFromRawWithError(t *testing.T) {
+	raw := RawJob{
+		SerializedJob:      nil,
+		SerializedJobInput: nil,
+	}
+	_, err := raw.ToJobWithSchedule()
+	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
+
+	// now, set the first one to a valid job
+	jobSerialized, _ := fakeSerialized(t, CronJobInput{
+		JobID:        1,
+		GroupID:      1,
+		SuperGroupID: 1,
+		OtherInputs:  map[string]interface{}{},
+	})
+
+	raw.SerializedJob = jobSerialized
+	_, err = raw.ToJobWithSchedule()
+	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
 }
 
 func TestJobFromRaw(t *testing.T) {
