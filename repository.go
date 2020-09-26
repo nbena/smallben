@@ -55,8 +55,8 @@ package smallben
 //	if len(jobsToAdd) == 0 {
 //		return JobWithSchedule{}, pgx.ErrNoRows
 //	}
-//	job := jobsToAdd[0]
-//	jobWithSchedule, err := (&job).ToJobWithSchedule()
+//	rawJob := jobsToAdd[0]
+//	jobWithSchedule, err := (&rawJob).ToJobWithSchedule()
 //	return jobWithSchedule, err
 //}
 //
@@ -97,11 +97,11 @@ package smallben
 //	}
 //	jobsToAdd := make([]JobWithSchedule, len(rawJobs))
 //	for i, rawJob := range rawJobs {
-//		job, err := rawJob.ToJobWithSchedule()
+//		rawJob, err := rawJob.ToJobWithSchedule()
 //		if err != nil {
 //			return nil, err
 //		}
-//		jobsToAdd[i] = job
+//		jobsToAdd[i] = rawJob
 //	}
 //	return jobsToAdd, nil
 //}
@@ -163,7 +163,7 @@ package smallben
 //func (r *Repository2) SetCronIdOfJobsWithSchedule(ctx context.Context, jobsToAdd []JobWithSchedule) error {
 //	rawTests := make([]RawJob, len(jobsToAdd))
 //	for i, test := range jobsToAdd {
-//		rawTests[i] = test.job
+//		rawTests[i] = test.rawJob
 //	}
 //	return r.transactionUpdate(
 //		ctx,
@@ -179,7 +179,7 @@ package smallben
 //func (r *Repository2) SetCronIdAndChangeSchedule(ctx context.Context, jobsToAdd []JobWithSchedule) error {
 //	rawTests := make([]RawJob, len(jobsToAdd))
 //	for i, test := range jobsToAdd {
-//		rawTests[i] = test.job
+//		rawTests[i] = test.rawJob
 //	}
 //	return r.transactionUpdate(
 //		ctx,

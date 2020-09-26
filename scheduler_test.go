@@ -44,7 +44,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 	maxTimeToWait := int64(0)
 	expectedSum := 0
 	for _, job := range s.jobs {
-		maxTimeToWait += job.job.EverySecond
+		maxTimeToWait += job.rawJob.EverySecond
 		expectedSum += job.runInput.OtherInputs["counter"].(int)
 	}
 
@@ -72,7 +72,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 	// now we need to build the array for raw jobs
 	rawJobs := make([]RawJob, len(s.jobs))
 	for i := range s.jobs {
-		rawJobs[i] = s.jobs[i].job
+		rawJobs[i] = s.jobs[i].rawJob
 	}
 	s.scheduler.DeleteJobs(rawJobs)
 	lenOfJobsAfterSecondRemove := len(s.scheduler.cron.Entries())
@@ -88,7 +88,7 @@ func (s *SchedulerTestSuite) setup() {
 
 	s.jobs = []JobWithSchedule{
 		{
-			job: RawJob{
+			rawJob: RawJob{
 				ID:                 1,
 				GroupID:            1,
 				SuperGroupID:       1,
@@ -112,7 +112,7 @@ func (s *SchedulerTestSuite) setup() {
 			schedule: cron.ConstantDelaySchedule{Delay: 1 * time.Second},
 		},
 		{
-			job: RawJob{
+			rawJob: RawJob{
 				ID:                 2,
 				GroupID:            1,
 				SuperGroupID:       1,
@@ -136,7 +136,7 @@ func (s *SchedulerTestSuite) setup() {
 			schedule: cron.ConstantDelaySchedule{Delay: 1 * time.Second},
 		},
 		{
-			job: RawJob{
+			rawJob: RawJob{
 				ID:                 3,
 				GroupID:            1,
 				SuperGroupID:       1,

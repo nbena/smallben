@@ -27,14 +27,14 @@ func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 			runFunc.Run(runFuncInput)
 		}))
 
-		jobs[i].job.CronID = int64(entryID)
+		jobs[i].rawJob.CronID = int64(entryID)
 	}
 }
 
 // DeleteJobsWithSchedule remove `jobsToAdd` from the scheduler. This function never fails.
 func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 	for _, job := range jobs {
-		s.cron.Remove(cron.EntryID(job.job.CronID))
+		s.cron.Remove(cron.EntryID(job.rawJob.CronID))
 	}
 }
 

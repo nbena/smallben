@@ -55,7 +55,7 @@ func TestJobToRaw(t *testing.T) {
 	pairs := []jobToRawTest{
 		{
 			withSchedule: JobWithSchedule{
-				job: RawJob{
+				rawJob: RawJob{
 					ID:                 1,
 					GroupID:            1,
 					SuperGroupID:       1,

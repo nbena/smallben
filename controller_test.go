@@ -3,8 +3,10 @@ package smallben
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/robfig/cron/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"reflect"
 	"sync"
 	"testing"
 )
@@ -88,7 +90,7 @@ func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 	// do they have been added?
 	lenOfCronAfterFirstAdd := len(s.smallBen.scheduler.cron.Entries())
 	if lenOfCronAfterFirstAdd != len(s.jobs) {
-		t.Errorf("The job count has some problems. Got: %d Expected: %d\n", lenOfCronAfterFirstAdd, len(s.jobs))
+		t.Errorf("The rawJob count has some problems. Got: %d Expected: %d\n", lenOfCronAfterFirstAdd, len(s.jobs))
 	}
 
 	// let's also retrieve it from the database
@@ -121,11 +123,11 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 
 	lenOfJobsBeforeAnything := len(s.smallBen.scheduler.cron.Entries())
 
-	// now pause the first job
+	// now pause the first rawJob
 	jobIDToPause := s.jobs[0].ID
 	err = s.smallBen.PauseJobs([]int64{jobIDToPause})
 	if err != nil {
-		t.Errorf("Fail to pause job: %s\n", err.Error())
+		t.Errorf("Fail to pause rawJob: %s\n", err.Error())
 		t.FailNow()
 	}
 
@@ -139,7 +141,7 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	// now, resume it.
 	err = s.smallBen.ResumeJobs([]int64{jobIDToPause})
 	if err != nil {
-		t.Errorf("Fail to resume job: %s\n", err.Error())
+		t.Errorf("Fail to resume rawJob: %s\n", err.Error())
 		t.FailNow()
 	}
 
@@ -152,7 +154,70 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	}
 }
 
-func (s *SmallBenTestSuite) setup(t *testing.T) {
+func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
+
+	// first and foremost, let's start the
+	// SmallBen
+	err := s.smallBen.Start()
+	if err != nil {
+		t.Errorf("Cannot even start: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// add the jobs
+	// let's add the jobs
+	err = s.smallBen.AddJobs(s.jobs)
+	if err != nil {
+		t.Errorf("Fail to add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	lenOfJobsBefore := len(s.smallBen.scheduler.cron.Entries())
+
+	// list of cron ids
+	cronIDSBefore := make([]int64, len(s.jobs))
+	// list of schedules
+	schedulesBefore := make([]cron.Schedule, len(s.jobs))
+	for i, job := range s.smallBen.scheduler.cron.Entries() {
+		cronIDSBefore[i] = int64(job.ID)
+		schedulesBefore[i] = job.Schedule
+	}
+
+	// now change the schedule
+	schedule := UpdateSchedule{
+		JobID:       s.jobs[0].ID,
+		EverySecond: 120,
+	}
+
+	err = s.smallBen.UpdateSchedule([]UpdateSchedule{schedule})
+	if err != nil {
+		t.Errorf("Fail to change schedule: %s\n", err.Error())
+	}
+
+	// now check that the schedules have changed
+	lenOfJobsAfter := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsBefore != lenOfJobsAfter {
+		t.Errorf("Something went wrong when changing the schedule. Got: %d Expected %d\n",
+			lenOfJobsAfter, lenOfJobsBefore)
+	}
+
+	// build the new list of schedules and ids
+	cronIDSAfter := make([]int64, len(s.jobs))
+	schedulesAfter := make([]cron.Schedule, len(s.jobs))
+	for i, job := range s.smallBen.scheduler.cron.Entries() {
+		cronIDSAfter[i] = int64(job.ID)
+		schedulesAfter[i] = job.Schedule
+	}
+
+	// they should have changed
+	if reflect.DeepEqual(cronIDSAfter, cronIDSBefore) {
+		t.Errorf("Something went wrong when changing the schedule. Got: %v\n", cronIDSAfter)
+	}
+	if reflect.DeepEqual(schedulesBefore, schedulesAfter) {
+	}
+}
+
+func (s *SmallBenTestSuite) setup() {
 	jobs := []Job{
 		{
 			ID:           1,
@@ -220,7 +285,7 @@ func TestSmallBenAdd(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup(t)
+		test.setup()
 		test.TestAddDelete(t)
 		test.teardown(false, t)
 	}
@@ -230,8 +295,18 @@ func TestSmallBenPauseResume(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup(t)
+		test.setup()
 		test.TestPauseResume(t)
+		test.teardown(true, t)
+	}
+}
+
+func TestSmallBenChangeSchedule(t *testing.T) {
+	tests := buildSmallBenTestSuite(t)
+
+	for _, test := range tests {
+		test.setup()
+		test.TestChangeSchedule(t)
 		test.teardown(true, t)
 	}
 }

@@ -16,7 +16,7 @@ const KeyTestPgDbName = "TEST_DATABASE_PG"
 
 var (
 	// accessed by the TestCronJob
-	// indexed by the id of the job
+	// indexed by the id of the rawJob
 	accessed = make(map[int64]CronJobInput)
 
 	pgConn = os.Getenv(KeyTestPgDbName)
@@ -50,8 +50,8 @@ func NewRepositoryTestSuite(dialector gorm.Dialector, t *testing.T) *RepositoryT
 }
 
 // TestAddNoError tests that adding a series of jobsToAdd works.
-// Checks various way of retrieve the job, including
-// the execution of a retrieved job.
+// Checks various way of retrieve the rawJob, including
+// the execution of a retrieved rawJob.
 func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 
 	// add them
@@ -99,24 +99,24 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 
 	// retrieve one of them
-	job, err := r.repository.GetJob(r.jobsToAdd[0].job.ID)
+	job, err := r.repository.GetJob(r.jobsToAdd[0].rawJob.ID)
 	if err != nil {
-		t.Errorf("Fail to retrieve single job: %s\n", err.Error())
+		t.Errorf("Fail to retrieve single rawJob: %s\n", err.Error())
 		t.FailNow()
 	}
 	// this check won't work because of time difference
-	// r.Equal(job.job, r.jobsToAdd[0].job)
+	// r.Equal(rawJob.rawJob, r.jobsToAdd[0].rawJob)
 
 	// also, checking that the input has been correctly
 	// recovered
 	if !reflect.DeepEqual(job.runInput, r.jobsToAdd[0].runInput) {
-		t.Errorf("The retrieved job is wrong. Got\n%+v\nExpected\n%+v\n", job.runInput, r.jobsToAdd[0].runInput)
+		t.Errorf("The retrieved rawJob is wrong. Got\n%+v\nExpected\n%+v\n", job.runInput, r.jobsToAdd[0].runInput)
 	}
 	// and now execute it
 	job.run.Run(job.runInput)
 	// making sure it has been executed
-	if !reflect.DeepEqual(accessed[job.job.ID], r.jobsToAdd[0].runInput) {
-		t.Errorf("The job has not been executed correctly. Got\n%+v\nExpected\n%+v\n", accessed[job.job.ID], r.jobsToAdd[0].runInput)
+	if !reflect.DeepEqual(accessed[job.rawJob.ID], r.jobsToAdd[0].runInput) {
+		t.Errorf("The rawJob has not been executed correctly. Got\n%+v\nExpected\n%+v\n", accessed[job.rawJob.ID], r.jobsToAdd[0].runInput)
 	}
 }
 
@@ -141,7 +141,7 @@ func (r *RepositoryTestSuite) TestPauseJobs(t *testing.T) {
 	// we need to convert to the raw format
 	rawJobs := make([]RawJob, len(r.jobsToAdd))
 	for i, job := range r.jobsToAdd {
-		rawJobs[i] = job.job
+		rawJobs[i] = job.rawJob
 	}
 
 	// effectively pause them
@@ -193,7 +193,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	counter := int64(10)
 	// now, change the cron id
 	for i := range r.jobsToAdd {
-		r.jobsToAdd[i].job.CronID = counter
+		r.jobsToAdd[i].rawJob.CronID = counter
 		counter += 10
 	}
 
@@ -208,8 +208,8 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	jobs, err := r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	counter = 0
 	for i, job := range jobs {
-		if job.job.CronID != counter+10 {
-			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.job.CronID, int64(i+10))
+		if job.rawJob.CronID != counter+10 {
+			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.rawJob.CronID, int64(i+10))
 		}
 		counter += 10
 	}
@@ -219,8 +219,8 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 
 	// now we do the same, but we also change the schedule
 	for i := range r.jobsToAdd {
-		r.jobsToAdd[i].job.CronID = newCronID
-		r.jobsToAdd[i].job.EverySecond = newSchedule
+		r.jobsToAdd[i].rawJob.CronID = newCronID
+		r.jobsToAdd[i].rawJob.EverySecond = newSchedule
 	}
 
 	err = r.repository.SetCronIdAndChangeSchedule(r.jobsToAdd)
@@ -231,11 +231,11 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	// retrieve and check
 	jobs, err = r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	for _, job := range jobs {
-		if job.job.CronID != newCronID {
-			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.job.CronID, newCronID)
+		if job.rawJob.CronID != newCronID {
+			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.rawJob.CronID, newCronID)
 		}
-		if job.job.EverySecond != newSchedule {
-			t.Errorf("Schedule not changed. Got: %d Expected: %d\n", job.job.EverySecond, newSchedule)
+		if job.rawJob.EverySecond != newSchedule {
+			t.Errorf("Schedule not changed. Got: %d Expected: %d\n", job.rawJob.EverySecond, newSchedule)
 		}
 	}
 }
@@ -272,15 +272,15 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Pause", t)
 
 	// resume
-	err = r.repository.ResumeJobs([]JobWithSchedule{{job: notExisting}})
+	err = r.repository.ResumeJobs([]JobWithSchedule{{rawJob: notExisting}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Resume", t)
 
 	// set cron id
-	err = r.repository.SetCronId([]JobWithSchedule{{job: notExisting}})
+	err = r.repository.SetCronId([]JobWithSchedule{{rawJob: notExisting}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronId", t)
 
 	// set cron id and change schedule
-	err = r.repository.SetCronIdAndChangeSchedule([]JobWithSchedule{{job: notExisting}})
+	err = r.repository.SetCronIdAndChangeSchedule([]JobWithSchedule{{rawJob: notExisting}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronIdAndChangeSchedule", t)
 
 }
@@ -297,7 +297,7 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 func (r *RepositoryTestSuite) setup(t *testing.T) {
 	r.jobsToAdd = []JobWithSchedule{
 		{
-			job: RawJob{
+			rawJob: RawJob{
 				ID:           1,
 				GroupID:      1,
 				SuperGroupID: 1,
@@ -315,7 +315,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			schedule: scheduleNeverFail(t, 30),
 		},
 		{
-			job: RawJob{
+			rawJob: RawJob{
 				ID:           2,
 				GroupID:      1,
 				SuperGroupID: 1,

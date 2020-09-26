@@ -103,7 +103,7 @@ func (s *SmallBen) fill() error {
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// build the JobWithSchedule struct for each requested job
+	// build the JobWithSchedule struct for each requested rawJob
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
 	for i, rawJob := range jobs {
 		job, err := rawJob.toJobWithSchedule()
@@ -184,10 +184,10 @@ func (s *SmallBen) ResumeJobs(jobsID []int64) error {
 
 	// now, we have to making sure those jobsToAdd are not already in the scheduler
 	// it's easier, just pick up those whose cron_id = 0
-	// because when a job is being paused, it gets a cron_id of 0.
+	// because when a rawJob is being paused, it gets a cron_id of 0.
 	var finalJobs []JobWithSchedule
 	for _, job := range jobs {
-		if job.job.CronID == DefaultCronID {
+		if job.rawJob.CronID == DefaultCronID {
 			finalJobs = append(finalJobs, job)
 		}
 	}
@@ -228,15 +228,26 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	// compute the new schedule
 	// for the required jobs
 	for i, job := range jobsWithScheduleOld {
-		newJobRaw := job.job
+		// job is a copy of the original job
+		// so it is safe to modify it.
+		newJobRaw := job.rawJob
+		// replace the new interval
 		newJobRaw.EverySecond = scheduleInfo[i].EverySecond
-		newJob, err := newJobRaw.ToJobWithSchedule()
+		// build the cron.Schedule object from it
+		newSchedule, err := newJobRaw.schedule()
 		if err != nil {
 			return err
 		}
-		// ok, now store the new job into the list
+		// and now, the JobWithSchedule
+		// with the new inner rawJob.
+		newJob := JobWithSchedule{
+			rawJob:   newJobRaw,
+			schedule: newSchedule,
+			run:      job.run,
+			runInput: job.runInput,
+		}
+		// now store the new rawJob into the list
 		jobsWithScheduleNew[i] = newJob
-
 	}
 
 	// now, remove the jobsToAdd from the scheduler

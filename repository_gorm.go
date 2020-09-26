@@ -20,7 +20,7 @@ func NewRepository3(dialector gorm.Dialector, gormConfig *gorm.Config) (Reposito
 }
 
 // AddJobs adds `jobsToAdd` to the database. This operation can fail
-// if job serialization fails, or for database errors.
+// if rawJob serialization fails, or for database errors.
 func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
 	rawJobs := make([]RawJob, len(jobs))
 	for i, job := range jobs {
@@ -33,7 +33,7 @@ func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
 	return r.db.Create(&rawJobs).Error
 }
 
-// GetJob returns the job whose id is `jobID`.
+// GetJob returns the rawJob whose id is `jobID`.
 func (r *Repository3) GetJob(jobID int64) (JobWithSchedule, error) {
 	var rawJob RawJob
 	if err := r.db.First(&rawJob, "id = ?", jobID).Error; err != nil {
@@ -134,7 +134,7 @@ func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
 func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			result := tx.Model(&job.job).Update("cron_id", job.job.CronID)
+			result := tx.Model(&job.rawJob).Update("cron_id", job.rawJob.CronID)
 			if result.Error != nil {
 				return result.Error
 			}
@@ -150,7 +150,7 @@ func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			result := tx.Model(&job.job).Updates(map[string]interface{}{"cron_id": job.job.CronID, "every_second": job.job.EverySecond})
+			result := tx.Model(&job.rawJob).Updates(map[string]interface{}{"cron_id": job.rawJob.CronID, "every_second": job.rawJob.EverySecond})
 			if result.Error != nil {
 				return result.Error
 			}
