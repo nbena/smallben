@@ -380,6 +380,18 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = true count mismatch
 Got: %d Expected: %d\n`, len(jobs), 1)
 	}
+
+	// now, we do the same by with paused = false
+	paused = false
+	options.Paused = &paused
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by paused and super group id: %s\n", err.Error())
+	}
+	if len(jobs) != len(jobsBySuperGroup)-1 {
+		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = false count mismatch
+Got: %d Expected: %d\n`, len(jobs), len(jobsBySuperGroup)-1)
+	}
 }
 
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {

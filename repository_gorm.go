@@ -204,10 +204,7 @@ func (r *Repository3) ListJobs(options *ListJobsOptions) ([]RawJob, error) {
 		}
 	}
 	err := query.Find(&jobs).Error
-	if err != nil {
-		return nil, err
-	}
-	return jobs, nil
+	return jobs, err
 }
 
 func (r *Repository3) updatePausedField(jobs []RawJob, paused bool) error {
