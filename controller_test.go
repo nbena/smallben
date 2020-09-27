@@ -140,7 +140,9 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	}
 
 	// now, resume it.
-	err = s.smallBen.ResumeJobs([]int64{jobIDToPause})
+	err = s.smallBen.ResumeJobs(&PauseResumeOptions{
+		JobIDs: []int64{jobIDToPause},
+	})
 	if err != nil {
 		t.Errorf("Fail to resume rawJob: %s\n", err.Error())
 		t.FailNow()
@@ -334,7 +336,9 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
 
 	// same for resume
-	err = s.smallBen.ResumeJobs([]int64{10000})
+	err = s.smallBen.ResumeJobs(&PauseResumeOptions{
+		JobIDs: []int64{1000},
+	})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// same for update
