@@ -22,8 +22,9 @@ type Job struct {
 	CronID int64
 	// CronExpression specifies the scheduling of the job.
 	CronExpression string
-	// Paused specifies whether this rawJob has been paused.
-	Paused bool
+	// paused specifies whether this job has been paused.
+	// Only used when returning this struct.
+	paused bool
 	// createdAt specifies when this rawJob has been created.
 	createdAt time.Time
 	// updatedAt specifies the last time this object has been updated,
@@ -114,6 +115,37 @@ type JobWithSchedule struct {
 	runInput CronJobInput
 }
 
+// decodeSerializedFields decode j.serializedJob and j.SerializedJobInput.
+func (j *RawJob) decodeSerializedFields() (CronJob, CronJobInput, error) {
+	var decoder *gob.Decoder
+	var err error
+
+	// decode the interface executing the rawJob
+	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJob))
+	var runJob CronJob
+	if err = decoder.Decode(&runJob); err != nil {
+		return nil, CronJobInput{}, err
+	}
+
+	// decode the map containing the arguments will be passed
+	// to the job
+	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJobInput))
+	var jobInputMap map[string]interface{}
+	// var runJobInput CronJobInput
+	if err = decoder.Decode(&jobInputMap); err != nil {
+		return nil, CronJobInput{}, err
+	}
+	// and build the overall object containing all the
+	// inputs will be passed to the Job
+	runJobInput := CronJobInput{
+		JobID:        j.ID,
+		GroupID:      j.GroupID,
+		SuperGroupID: j.SuperGroupID,
+		OtherInputs:  jobInputMap,
+	}
+	return runJob, runJobInput, nil
+}
+
 // ToJobWithSchedule returns a JobWithSchedule object from the current RawJob,
 // by copy. It returns errors in case the given schedule is not valid,
 // or in case the conversion of the rawJob interface/input fails.
@@ -125,31 +157,9 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	if err != nil {
 		return result, err
 	}
-
-	var decoder *gob.Decoder
-
-	// decode the interface executing the rawJob
-	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJob))
-	var runJob CronJob
-	if err = decoder.Decode(&runJob); err != nil {
+	runJob, runJobInput, err := j.decodeSerializedFields()
+	if err != nil {
 		return result, err
-	}
-
-	// decode the map containing the arguments will be passed
-	// to the job
-	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJobInput))
-	var jobInputMap map[string]interface{}
-	// var runJobInput CronJobInput
-	if err = decoder.Decode(&jobInputMap); err != nil {
-		return result, err
-	}
-	// and build the overall object containing all the
-	// inputs will be passed to the Job
-	runJobInput := CronJobInput{
-		JobID:        j.ID,
-		GroupID:      j.GroupID,
-		SuperGroupID: j.SuperGroupID,
-		OtherInputs:  jobInputMap,
 	}
 
 	result = JobWithSchedule{
