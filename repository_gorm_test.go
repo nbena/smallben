@@ -260,7 +260,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	// now, pause one of them.
 	err = r.repository.PauseJobs([]RawJob{r.jobsToAdd[0].rawJob})
 	if err != nil {
-		t.Errorf("Cannot pause job: %s", err.Error())
+		t.Errorf("Cannot pause job: %s\n", err.Error())
 		t.FailNow()
 	}
 
@@ -273,20 +273,20 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	}
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
-		t.Errorf("Cannot get paused jobs: %s", err.Error())
+		t.Errorf("Cannot get paused jobs: %s\n", err.Error())
 	}
 	if len(jobs) != 1 {
-		t.Errorf("Paused = true count mismatch: Got %d Expected: %d", len(jobs), 1)
+		t.Errorf("Paused = true count mismatch: Got %d Expected: %d\n", len(jobs), 1)
 	}
 
 	// now do the same using paused = false
 	paused = false
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
-		t.Errorf("Cannot get unpaused jobs: %s", err.Error())
+		t.Errorf("Cannot get unpaused jobs: %s\n", err.Error())
 	}
 	if len(jobs) != len(r.jobsToAdd)-1 {
-		t.Errorf("Paused = false count mismatch: Got %d Expected: %d",
+		t.Errorf("Paused = false count mismatch: Got %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd)-1)
 	}
 
@@ -304,7 +304,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf("Fail to get jobs by group ids: %s\n", err.Error())
 	}
 	if len(jobs) != len(r.jobsToAdd) {
-		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d",
+		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd))
 	}
 
@@ -316,7 +316,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf("Fail to get jobs by super group ids: %s\n", err.Error())
 	}
 	if len(jobs) != len(r.jobsToAdd) {
-		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d",
+		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd))
 	}
 
@@ -336,8 +336,49 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf("Fail to get jobs by subset of group ids: %s\n", err.Error())
 	}
 	if len(jobs) != len(jobsByGroup) {
-		t.Errorf("GroupIDs = groups[0] count mismatch. Got: %d Expected: %d",
+		t.Errorf("GroupIDs = groups[0] count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(jobsByGroup))
+	}
+
+	// do the same, also for the super-group
+	// this time, using an array of more than one item.
+	superGroupsToFilter := superGroups[len(superGroups)-2:]
+	options.SuperGroupIDs = superGroupsToFilter
+	options.GroupIDs = nil
+	var jobsBySuperGroup []int64
+	for _, job := range r.jobsToAdd {
+		for _, superGroupId := range superGroupsToFilter {
+			if job.rawJob.SuperGroupID == superGroupId {
+				jobsBySuperGroup = append(jobsBySuperGroup, job.rawJob.ID)
+				break
+			}
+		}
+	}
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by subset of super group ids: %s\n", err.Error())
+	}
+	if len(jobs) != len(jobsBySuperGroup) {
+		t.Errorf("SuperGroupIDs = superGroups[-2:] count mismatch. Got: %d Expected: %d\n",
+			len(jobs), len(jobsBySuperGroup))
+	}
+
+	// now, we pause of such jobs
+	err = r.repository.PauseJobs([]RawJob{{
+		ID: jobs[0].ID,
+	}})
+	if err != nil {
+		t.Errorf("Cannot pause jobs: %s\n", err.Error())
+	}
+	paused = true
+	options.Paused = &paused
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by paused and super group id: %s\n", err.Error())
+	}
+	if len(jobs) != 1 {
+		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = true count mismatch
+Got: %d Expected: %d\n`, len(jobs), 1)
 	}
 }
 
@@ -399,6 +440,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 	// 2 jobs in (group 1, super group 1)
 	// 1 job in (group 2, super group 1)
 	// 1 job in (group 1, super group 2)
+	// 1 job in (group 3, super group 3)
 	r.jobsToAdd = []JobWithSchedule{
 		{
 			rawJob: RawJob{
@@ -466,6 +508,24 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 				JobID:        4,
 				GroupID:      1,
 				SuperGroupID: 2,
+				OtherInputs: map[string]interface{}{
+					"when I was a child": "I had fever",
+				},
+			},
+			schedule: scheduleNeverFail(t, 60),
+		},
+		{
+			rawJob: RawJob{
+				ID:             5,
+				GroupID:        3,
+				SuperGroupID:   3,
+				CronExpression: "@every 120s",
+			},
+			run: &TestCronJob{},
+			runInput: CronJobInput{
+				JobID:        5,
+				GroupID:      3,
+				SuperGroupID: 3,
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
