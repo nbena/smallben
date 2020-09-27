@@ -266,7 +266,12 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 
 	// re-retrieve using paused = true
 	paused := true
-	jobs, err = r.repository.ListJobs(&paused)
+	options := ListJobsOptions{
+		Paused:        &paused,
+		GroupIDs:      nil,
+		SuperGroupIDs: nil,
+	}
+	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Cannot get paused jobs: %s", err.Error())
 	}
@@ -276,7 +281,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 
 	// now do the same using paused = false
 	paused = false
-	jobs, err = r.repository.ListJobs(&paused)
+	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Cannot get unpaused jobs: %s", err.Error())
 	}
@@ -284,6 +289,28 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf("Paused = false count mismatch: Got %d Expected: %d",
 			len(jobs), len(r.jobsToAdd)-1)
 	}
+
+	// now, we grab the list of unique groups
+	// and super groups
+	groups := getUniqueGroupID(r.jobsToAdd)
+	superGroups := getUniqueSuperGroupID(r.jobsToAdd)
+
+	// query using all the available group ids
+	// should return all jobs
+	options.Paused = nil
+	options.GroupIDs = groups
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by group ids: %s\n", err.Error())
+	}
+	if len(jobs) != len(r.jobsToAdd) {
+		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d",
+			len(jobs), len(r.jobsToAdd))
+	}
+
+	// do the same, also for super groups
+	options.GroupIDs = nil
+	options.SuperGroupIDs = superGroups
 }
 
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
@@ -341,6 +368,9 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 }
 
 func (r *RepositoryTestSuite) setup(t *testing.T) {
+	// 2 jobs in (group 1, super group 1)
+	// 1 job in (group 2, super group 1)
+	// 1 job in (group 1, super group 2)
 	r.jobsToAdd = []JobWithSchedule{
 		{
 			rawJob: RawJob{
@@ -372,6 +402,42 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 				JobID:        2,
 				GroupID:      1,
 				SuperGroupID: 1,
+				OtherInputs: map[string]interface{}{
+					"when I was a child": "I had fever",
+				},
+			},
+			schedule: scheduleNeverFail(t, 60),
+		},
+		{
+			rawJob: RawJob{
+				ID:             3,
+				GroupID:        2,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
+			},
+			run: &TestCronJob{},
+			runInput: CronJobInput{
+				JobID:        3,
+				GroupID:      2,
+				SuperGroupID: 1,
+				OtherInputs: map[string]interface{}{
+					"when I was a child": "I had fever",
+				},
+			},
+			schedule: scheduleNeverFail(t, 60),
+		},
+		{
+			rawJob: RawJob{
+				ID:             4,
+				GroupID:        1,
+				SuperGroupID:   2,
+				CronExpression: "@every 120s",
+			},
+			run: &TestCronJob{},
+			runInput: CronJobInput{
+				JobID:        4,
+				GroupID:      1,
+				SuperGroupID: 2,
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
@@ -449,4 +515,38 @@ func TestRepositoryError(t *testing.T) {
 		test.TestPauseJobNotExisting(t)
 		test.teardown(true, t)
 	}
+}
+
+func getUniqueGroupID(jobs []JobWithSchedule) []int64 {
+	var ids []int64
+	for _, job := range jobs {
+		found := false
+		for _, id := range ids {
+			if id == job.rawJob.GroupID {
+				found = true
+				break
+			}
+		}
+		if found == false {
+			ids = append(ids, job.rawJob.GroupID)
+		}
+	}
+	return ids
+}
+
+func getUniqueSuperGroupID(jobs []JobWithSchedule) []int64 {
+	var ids []int64
+	for _, job := range jobs {
+		found := false
+		for _, id := range ids {
+			if id == job.rawJob.SuperGroupID {
+				found = true
+				break
+			}
+		}
+		if found == false {
+			ids = append(ids, job.rawJob.SuperGroupID)
+		}
+	}
+	return ids
 }

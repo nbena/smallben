@@ -171,28 +171,39 @@ type ListJobsOptions struct {
 	// If paused = false list all jobs that have not been paused.
 	// If paused = nil list all jobs no matter if they have been paused or not.
 	Paused *bool
-	// GroupID filters the jobs in the given Group ID.
+	// GroupIDs filters the jobs in the given Group ID.
 	// if nil, it is ignored.
-	GroupID *int64
-	// SuperGroupID filters the jobs by the given Super Group ID.
+	// It makes ListJobs returning all the jobs whose GroupID
+	// is in GroupIDs
+	GroupIDs []int64
+	// SuperGroupIDs filters the jobs by the given Super Group ID.
 	// if nil, it is ignored.
-	SuperGroupID *int64
+	// It makes ListJobs returning all the jobs whose SuperGroupID
+	// is in SuperGroupIDs
+	SuperGroupIDs []int64
 }
 
-// ListJobs list all jobs.
-// If paused = true list all jobs that have been paused.
-// If paused = false list all jobs that have not been paused.
-// If paused = nil list all jobs no matter if they have been paused or not.
-func (r *Repository3) ListJobs(paused *bool) ([]RawJob, error) {
+// ListJobs list all jobs using options. If nil, no options will
+// be used returning all the jobs.
+func (r *Repository3) ListJobs(options *ListJobsOptions) ([]RawJob, error) {
 	var jobs []RawJob
-	var err error
-	if paused == nil {
-		err = r.db.Find(&jobs).Error
-	} else if *paused == false {
-		err = r.db.Find(&jobs, "paused = ?", false).Error
-	} else {
-		err = r.db.Find(&jobs, "paused = ?", true).Error
+	var query = r.db.Session(&gorm.Session{WithConditions: true})
+	if options != nil {
+		if options.Paused != nil {
+			if *options.Paused == true {
+				query = query.Where("paused = ?", true)
+			} else if *options.Paused == false {
+				query = query.Where("paused = ?", false)
+			}
+		}
+		if options.SuperGroupIDs != nil {
+			query = query.Where("super_group_id in (?)", options.SuperGroupIDs)
+		}
+		if options.GroupIDs != nil {
+			query = query.Where("group_id in (?)", options.GroupIDs)
+		}
 	}
+	err := query.Find(&jobs).Error
 	if err != nil {
 		return nil, err
 	}
