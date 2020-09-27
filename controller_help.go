@@ -25,6 +25,9 @@ func (s *SmallBen) fill() error {
 	if !s.filled {
 		// get all the tests
 		jobs, err := s.repository.GetAllJobsToExecute()
+		if err != nil {
+			return err
+		}
 		// add them to the scheduler to get back the cron_id
 		s.scheduler.AddJobs(jobs)
 		// now, update the db by updating the cron entries
