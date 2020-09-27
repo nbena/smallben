@@ -41,10 +41,7 @@ func (r *Repository3) GetJob(jobID int64) (JobWithSchedule, error) {
 	}
 	// now, convert it to a JobWithSchedule
 	job, err := rawJob.ToJobWithSchedule()
-	if err != nil {
-		return JobWithSchedule{}, err
-	}
-	return job, nil
+	return job, err
 }
 
 // PauseJobs pause jobsToAdd whose id are in `jobsToAdd`.

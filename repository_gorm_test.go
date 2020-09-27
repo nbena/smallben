@@ -274,6 +274,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Cannot get paused jobs: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != 1 {
 		t.Errorf("Paused = true count mismatch: Got %d Expected: %d\n", len(jobs), 1)
@@ -284,10 +285,18 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Cannot get unpaused jobs: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(r.jobsToAdd)-1 {
 		t.Errorf("Paused = false count mismatch: Got %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd)-1)
+	}
+
+	// resume the job that have been paused
+	err = r.repository.ResumeJobs([]JobWithSchedule{r.jobsToAdd[0]})
+	if err != nil {
+		t.Errorf("Cannot resume job: %s\n", err.Error())
+		t.FailNow()
 	}
 
 	// now, we grab the list of unique groups
@@ -302,18 +311,55 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by group ids: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(r.jobsToAdd) {
 		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd))
 	}
 
+	// now, let's pause a job within the group
+	// to use the paused field
+	err = r.repository.PauseJobs([]RawJob{{
+		ID: jobs[0].ID,
+	}})
+	if err != nil {
+		t.Errorf("Fail to pause jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+	paused = true
+	options.Paused = &paused
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by group and paused: %s\n", err.Error())
+		t.FailNow()
+	}
+	if len(jobs) != 1 {
+		t.Errorf(`GroupIDs = all & paused = true count mismatch
+Got: %d Expected: %d\n`, len(jobs), 1)
+	}
+
+	// now test with pause = false
+	paused = false
+	options.Paused = &paused
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by group and paused: %s\n", err.Error())
+		t.FailNow()
+	}
+	if len(jobs) != len(r.jobsToAdd)-1 {
+		t.Errorf(`GroupIDs = all & paused = false count mismatch
+Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
+	}
+
 	// do the same, also for super groups
+	options.Paused = nil
 	options.GroupIDs = nil
 	options.SuperGroupIDs = superGroups
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by super group ids: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(r.jobsToAdd) {
 		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
@@ -334,6 +380,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by subset of group ids: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(jobsByGroup) {
 		t.Errorf("GroupIDs = groups[0] count mismatch. Got: %d Expected: %d\n",
@@ -357,6 +404,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by subset of super group ids: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(jobsBySuperGroup) {
 		t.Errorf("SuperGroupIDs = superGroups[-2:] count mismatch. Got: %d Expected: %d\n",
@@ -369,12 +417,14 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	}})
 	if err != nil {
 		t.Errorf("Cannot pause jobs: %s\n", err.Error())
+		t.FailNow()
 	}
 	paused = true
 	options.Paused = &paused
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by paused and super group id: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != 1 {
 		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = true count mismatch
@@ -387,6 +437,7 @@ Got: %d Expected: %d\n`, len(jobs), 1)
 	jobs, err = r.repository.ListJobs(&options)
 	if err != nil {
 		t.Errorf("Fail to get jobs by paused and super group id: %s\n", err.Error())
+		t.FailNow()
 	}
 	if len(jobs) != len(jobsBySuperGroup)-1 {
 		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = false count mismatch
