@@ -161,7 +161,8 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 }
 
 // ListJobsOptions defines the options
-// to use when listing the jobs
+// to use when listing the jobs.
+// All options are *combined*.
 type ListJobsOptions struct {
 	// Paused controls the `paused` field.
 	// If paused = true list all jobs that have been paused.
@@ -178,29 +179,51 @@ type ListJobsOptions struct {
 	// It makes ListJobs returning all the jobs whose SuperGroupID
 	// is in SuperGroupIDs
 	SuperGroupIDs []int64
+	// JobIDs filters the jobs by the given job ID.
+	// This option override other options.
+	JobIDs []int64
+}
+
+// Need to implement the toListOptions interface.
+func (o *ListJobsOptions) toListOptions() ListJobsOptions {
+	return *o
 }
 
 // ListJobs list all jobs using options. If nil, no options will
 // be used returning all the jobs.
-func (r *Repository3) ListJobs(options *ListJobsOptions) ([]RawJob, error) {
+func (r *Repository3) ListJobs(options toListOptions) ([]RawJob, error) {
 	var jobs []RawJob
 	var query = r.db.Session(&gorm.Session{WithConditions: true})
 	if options != nil {
-		if options.Paused != nil {
-			if *options.Paused == true {
+		convertedOptions := options.toListOptions()
+		if convertedOptions.Paused != nil {
+			if *convertedOptions.Paused == true {
 				query = query.Where("paused = ?", true)
-			} else if *options.Paused == false {
+			} else if *convertedOptions.Paused == false {
 				query = query.Where("paused = ?", false)
 			}
 		}
-		if options.SuperGroupIDs != nil {
-			query = query.Where("super_group_id in (?)", options.SuperGroupIDs)
+		if convertedOptions.JobIDs != nil {
+			query = query.Where("id in (?)", convertedOptions.JobIDs)
 		}
-		if options.GroupIDs != nil {
-			query = query.Where("group_id in (?)", options.GroupIDs)
+		if convertedOptions.SuperGroupIDs != nil {
+			query = query.Where("super_group_id in (?)", convertedOptions.SuperGroupIDs)
+		}
+		if convertedOptions.GroupIDs != nil {
+			query = query.Where("group_id in (?)", convertedOptions.GroupIDs)
 		}
 	}
 	err := query.Find(&jobs).Error
+	// a check for gorm.ErrRecordNotFound if we require only the job id
+	if options != nil {
+		convertedOptions := options.toListOptions()
+		if convertedOptions.JobIDs != nil && convertedOptions.SuperGroupIDs == nil &&
+			convertedOptions.GroupIDs == nil && convertedOptions.Paused == nil {
+			if len(jobs) != len(convertedOptions.JobIDs) {
+				err = gorm.ErrRecordNotFound
+			}
+		}
+	}
 	return jobs, err
 }
 

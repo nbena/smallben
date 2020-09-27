@@ -448,8 +448,7 @@ Got: %d Expected: %d\n`, len(jobs), len(jobsBySuperGroup)-1)
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
 	if err == nil {
 		t.Errorf("%s error expected. Should have been not nil.\n", msg)
-	}
-	if !errors.Is(err, expected) {
+	} else if !errors.Is(err, expected) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
 	}
 }

@@ -38,6 +38,12 @@ func (s *SmallBen) fill() error {
 	return nil
 }
 
+// toListOptions is an interface implemented
+// by structs that can be converted to a ListOptions struct.
+type toListOptions interface {
+	toListOptions() ListJobsOptions
+}
+
 // PauseResumeOptions governs the behavior
 // of the PauseJobs and ResumeJobs methods.
 type PauseResumeOptions struct {
@@ -66,26 +72,49 @@ func (o *PauseResumeOptions) Valid() bool {
 	return true
 }
 
-// getJobsFromOptions returns all the jobs according to options.
-func (s *SmallBen) getJobsFromOptions(options *PauseResumeOptions) ([]RawJob, error) {
-	var jobs []RawJob
-	var err error
-
-	if options.JobIDs != nil {
-		jobs, err = s.repository.GetRawJobsByIds(options.JobIDs)
-	} else if options.GroupIDs != nil && options.SuperGroupIDs != nil {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			GroupIDs:      options.GroupIDs,
-			SuperGroupIDs: options.SuperGroupIDs,
-		})
-	} else if options.GroupIDs != nil {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			GroupIDs: options.GroupIDs,
-		})
-	} else {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			SuperGroupIDs: options.SuperGroupIDs,
-		})
+// toListOptions convert to ListJobOptions by preserving the
+// different semantics of the two struct, i.e., on ListJobOptions
+// all options can be combined, while here JobIDs is exclusive.
+func (o *PauseResumeOptions) toListOptions() ListJobsOptions {
+	// provide only JobIDs if not nil
+	if o.JobIDs != nil {
+		return ListJobsOptions{
+			JobIDs: o.JobIDs,
+		}
 	}
-	return jobs, err
+	// otherwise, fill in all the other options.
+	return ListJobsOptions{
+		Paused:        nil,
+		GroupIDs:      o.GroupIDs,
+		SuperGroupIDs: o.SuperGroupIDs,
+		JobIDs:        nil,
+	}
+}
+
+// PauseResumeOptions governs the behavior
+// of the DeleteJobs method.
+type DeleteOptions struct {
+	PauseResumeOptions
+	// Paused specifies whether to delete paused
+	// jobs or not (or do not care about it).
+	Paused *bool
+}
+
+// toListOptions convert to ListJobOptions by preserving the
+// different semantics of the two struct, i.e., on ListJobOptions
+// all options can be combined, while here JobIDs is exclusive.
+func (o *DeleteOptions) toListOptions() ListJobsOptions {
+	if o.JobIDs != nil {
+		return ListJobsOptions{
+			JobIDs: o.JobIDs,
+		}
+	}
+	// otherwise fill in all the other options except
+	// JobIDs.
+	return ListJobsOptions{
+		Paused:        o.Paused,
+		GroupIDs:      o.GroupIDs,
+		SuperGroupIDs: o.SuperGroupIDs,
+		JobIDs:        nil,
+	}
 }

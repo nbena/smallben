@@ -92,26 +92,35 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	return nil
 }
 
-// DeleteJobs deletes `jobsID` from the scheduler. It returns an error
-// of type `gorm.ErrRecordNotFound` if some of the required jobsToAdd have not been found.
-func (s *SmallBen) DeleteJobs(jobsID []int64) error {
+// DeleteJobs deletes permanently jobs according to options.
+// It returns an error of type `gorm.ErrRecordNotFound` if the number
+// of deleted jobs does not match the expected one.
+// It returns an error of type ErrPauseResumeOptionsBad if the
+// passed in options are not in a correct format.
+func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
+	// check if the struct is valid
+	if !options.Valid() {
+		return ErrPauseResumeOptionsBad
+	}
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
 	// grab the jobs
 	// we need to know the cron id
-	tests, err := s.repository.GetRawJobsByIds(jobsID)
+	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
 		return err
 	}
 
 	// now delete them
-	if err = s.repository.DeleteJobsByIds(jobsID); err != nil {
+	if err = s.repository.DeleteJobsByIds(GetIdsFromJobRawList(jobs)); err != nil {
 		return err
 	}
 
 	// if here, the deletion from the database was fine
 	// so we can safely remove them from the scheduler.
-	s.scheduler.DeleteJobs(tests)
+	s.scheduler.DeleteJobs(jobs)
 	return nil
 }
 
@@ -119,16 +128,16 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 // It returns an error of type ErrPauseResumeOptionsBad if the options
 // are malformed.
 func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
 	// check if the struct is correct
 	if !options.Valid() {
 		return ErrPauseResumeOptionsBad
 	}
 
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	// grab the corresponding jobs
-	jobs, err := s.getJobsFromOptions(options)
+	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
 		return err
 	}
@@ -149,16 +158,16 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 // In case of errors during the last steps of the execution,
 // the jobsToAdd are removed from the scheduler.
 func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
 	// check if the struct is correct
 	if !options.Valid() {
 		return ErrPauseResumeOptionsBad
 	}
 
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	// grab the jobs
-	jobs, err := s.getJobsFromOptions(options)
+	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
 		return err
 	}

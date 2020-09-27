@@ -404,7 +404,9 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	}
 
 	// now, let's delete a job that does not exist.
-	err = s.smallBen.DeleteJobs([]int64{10000})
+	err = s.smallBen.DeleteJobs(&DeleteOptions{PauseResumeOptions: PauseResumeOptions{
+		JobIDs: []int64{10000},
+	}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// same for pause
@@ -514,7 +516,13 @@ func (s *SmallBenTestSuite) setup() {
 }
 
 func (s *SmallBenTestSuite) teardown(okNotFound bool, t *testing.T) {
-	err := s.smallBen.DeleteJobs(GetIdsFromJobList(s.jobs))
+	err := s.smallBen.DeleteJobs(
+		&DeleteOptions{
+			PauseResumeOptions: PauseResumeOptions{
+				JobIDs: GetIdsFromJobList(s.jobs),
+			},
+		})
+	// GetIdsFromJobList(s.jobs))
 	if err != nil {
 		if !(okNotFound && errors.Is(err, gorm.ErrRecordNotFound)) {
 			t.Errorf("Fail to delete: %s", err.Error())
