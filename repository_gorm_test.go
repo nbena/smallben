@@ -319,6 +319,26 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d",
 			len(jobs), len(r.jobsToAdd))
 	}
+
+	// now, select just a group
+	group := groups[0]
+	// compute all the jobs it should return
+	var jobsByGroup []int64
+	for _, job := range r.jobsToAdd {
+		if job.rawJob.GroupID == group {
+			jobsByGroup = append(jobsByGroup, job.rawJob.ID)
+		}
+	}
+	options.GroupIDs = []int64{group}
+	options.SuperGroupIDs = nil
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by subset of group ids: %s\n", err.Error())
+	}
+	if len(jobs) != len(jobsByGroup) {
+		t.Errorf("GroupIDs = groups[0] count mismatch. Got: %d Expected: %d",
+			len(jobs), len(jobsByGroup))
+	}
 }
 
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
