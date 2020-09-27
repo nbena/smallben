@@ -311,6 +311,14 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	// do the same, also for super groups
 	options.GroupIDs = nil
 	options.SuperGroupIDs = superGroups
+	jobs, err = r.repository.ListJobs(&options)
+	if err != nil {
+		t.Errorf("Fail to get jobs by super group ids: %s\n", err.Error())
+	}
+	if len(jobs) != len(r.jobsToAdd) {
+		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d",
+			len(jobs), len(r.jobsToAdd))
+	}
 }
 
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
