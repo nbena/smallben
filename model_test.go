@@ -236,6 +236,12 @@ func TestJobFromRawWithError(t *testing.T) {
 	if err == nil {
 		t.Errorf("An invalid schedule has been accepted")
 	}
+
+	raw.SerializedJob = []byte("not a valid CronJob")
+	_, err = raw.toJob()
+	if err == nil {
+		t.Errorf("A not valid CronJob has been decoded")
+	}
 }
 
 func TestJobFromRaw(t *testing.T) {
