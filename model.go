@@ -7,18 +7,6 @@ import (
 	"time"
 )
 
-// To be used when dealing with generics.
-type TestInfo interface {
-	Id() int
-	UserId() int
-	CronId() int
-	EverySecond() int
-	Paused() bool
-	CreatedAt() *time.Time
-	UpdatedAt() *time.Time
-	UserEvaluationRuleId() int
-}
-
 // Job is the struct used to interact with SmallBen.
 type Job struct {
 	// ID is a unique ID identifying the rawJob object.
@@ -105,7 +93,7 @@ type RawJob struct {
 	// of the interface executing this rawJob
 	SerializedJob []byte `gorm:"column:serialized_job;type:bytea"`
 	// SerializedJobInput is the gob-encoded byte array
-	// of the input of the interface executing this rawJob
+	// of the map containing the argument for the job.
 	SerializedJobInput []byte `gorm:"column:serialized_job_input;type:bytea"`
 }
 
@@ -147,11 +135,21 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 		return result, err
 	}
 
-	// decode the input of the rawJob function
+	// decode the map containing the arguments will be passed
+	// to the job
 	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJobInput))
-	var runJobInput CronJobInput
-	if err = decoder.Decode(&runJobInput); err != nil {
+	var jobInputMap map[string]interface{}
+	// var runJobInput CronJobInput
+	if err = decoder.Decode(&jobInputMap); err != nil {
 		return result, err
+	}
+	// and build the overall object containing all the
+	// inputs will be passed to the Job
+	runJobInput := CronJobInput{
+		JobID:        j.ID,
+		GroupID:      j.GroupID,
+		SuperGroupID: j.SuperGroupID,
+		OtherInputs:  jobInputMap,
 	}
 
 	result = JobWithSchedule{
@@ -181,17 +179,23 @@ func encodeJob(encoder *gob.Encoder, job CronJob) error {
 // BuildJob builds the raw version of the inner job, by encoding
 // the code to binary.
 func (j *JobWithSchedule) BuildJob() (RawJob, error) {
-	var buffer bytes.Buffer
-	encoder := gob.NewEncoder(&buffer)
-	if err := encodeJob(encoder, j.run); err != nil {
+	var bufferJob bytes.Buffer
+	var bufferInput bytes.Buffer
+	encoderJob := gob.NewEncoder(&bufferJob)
+	// encode the CronJob interface keeping the unit of work
+	// to execute. We need to use the encodeJob method
+	// due to how gob interface encoding works.
+	if err := encodeJob(encoderJob, j.run); err != nil {
 		return RawJob{}, err
 	}
-	j.rawJob.SerializedJob = buffer.Bytes()
-	buffer.Reset()
-	if err := encoder.Encode(j.runInput); err != nil {
+	j.rawJob.SerializedJob = bufferJob.Bytes()
+	encoderInput := gob.NewEncoder(&bufferInput)
+	// and now encode the map keeping the inputs
+	// of the job.
+	if err := encoderInput.Encode(j.runInput.OtherInputs); err != nil {
 		return RawJob{}, err
 	}
-	j.rawJob.SerializedJobInput = buffer.Bytes()
+	j.rawJob.SerializedJobInput = bufferInput.Bytes()
 	return j.rawJob, nil
 }
 

@@ -24,6 +24,7 @@ func (j *jobToRawTest) TestToRaw(t *testing.T) {
 	if err != nil {
 		t.Errorf("Cannot build RawJob from JobWithSchedule")
 	}
+
 	if !reflect.DeepEqual(j.expectedRaw, rawBuilt) {
 		t.Errorf("The build test is wrong. Got\n%+v\nExpected\n%+v\n", rawBuilt, j.expectedRaw)
 	}
@@ -93,7 +94,7 @@ func TestJobToRaw(t *testing.T) {
 		},
 	}
 
-	jobSerialized1, inputSerialized1 := fakeSerialized(t, inputJob1)
+	jobSerialized1, inputSerialized1 := fakeSerialized(t, inputJob1.OtherInputs)
 
 	pairs := []jobToRawTest{
 		{
@@ -151,12 +152,7 @@ func TestJobFromRawWithError(t *testing.T) {
 	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
 
 	// now, set the first one to a valid job
-	jobSerialized, _ := fakeSerialized(t, CronJobInput{
-		JobID:        1,
-		GroupID:      1,
-		SuperGroupID: 1,
-		OtherInputs:  map[string]interface{}{},
-	})
+	jobSerialized, _ := fakeSerialized(t, map[string]interface{}{})
 
 	raw.SerializedJob = jobSerialized
 	_, err = raw.ToJobWithSchedule()
@@ -189,7 +185,7 @@ func TestJobFromRaw(t *testing.T) {
 		},
 	}
 
-	jobSerialized1, inputSerialized1 := fakeSerialized(t, inputJob1)
+	jobSerialized1, inputSerialized1 := fakeSerialized(t, inputJob1.OtherInputs)
 
 	pairs := []jobFromRawTest{
 		{
@@ -231,12 +227,14 @@ func TestJobFromRaw(t *testing.T) {
 }
 
 // serialize a input for us
-func fakeSerialized(t *testing.T, input CronJobInput) ([]byte, []byte) {
+func fakeSerialized(t *testing.T, input map[string]interface{}) ([]byte, []byte) {
 	var bufferJob bytes.Buffer
 	var bufferInput bytes.Buffer
 
 	encoder := gob.NewEncoder(&bufferJob)
-	interfaceEncode(t, encoder, &TestCronJob{})
+	testCronJob := &TestCronJob{}
+
+	interfaceEncode(t, encoder, testCronJob)
 
 	encoder = gob.NewEncoder(&bufferInput)
 	if err := encoder.Encode(input); err != nil {
