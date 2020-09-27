@@ -298,6 +298,18 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	err = s.smallBen.PauseJobs(&PauseResumeOptions{JobIDs: []int64{10000}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
+	// now, let's check all the wrong combination of
+	// the PauseResumeOptions
+	// all nil
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{})
+	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
+	// jobIDs but also other fields
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{
+		JobIDs:   []int64{1000},
+		GroupIDs: []int64{1000},
+	})
+	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
+
 	// same for resume
 	err = s.smallBen.ResumeJobs([]int64{10000})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
