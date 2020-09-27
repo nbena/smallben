@@ -17,9 +17,9 @@ type Job struct {
 	// SuperGroupID specifies the ID of the super group
 	// where this group is contained in.
 	SuperGroupID int64
-	// CronID is the ID of the cron rawJob as assigned by the scheduler
+	// cronID is the ID of the cron rawJob as assigned by the scheduler
 	// internally.
-	CronID int64
+	cronID int64
 	// CronExpression specifies the scheduling of the job.
 	CronExpression string
 	// paused specifies whether this job has been paused.
@@ -144,6 +144,27 @@ func (j *RawJob) decodeSerializedFields() (CronJob, CronJobInput, error) {
 		OtherInputs:  jobInputMap,
 	}
 	return runJob, runJobInput, nil
+}
+
+// toJob converts j to a Job instance.
+func (j *RawJob) toJob() (Job, error) {
+	job, jobInput, err := j.decodeSerializedFields()
+	if err != nil {
+		return Job{}, err
+	}
+	result := Job{
+		ID:             j.ID,
+		GroupID:        j.GroupID,
+		SuperGroupID:   j.SuperGroupID,
+		cronID:         j.CronID,
+		CronExpression: j.CronExpression,
+		paused:         j.Paused,
+		createdAt:      j.CreatedAt,
+		updatedAt:      j.UpdatedAt,
+		Job:            job,
+		JobInput:       jobInput.OtherInputs,
+	}
+	return result, nil
 }
 
 // ToJobWithSchedule returns a JobWithSchedule object from the current RawJob,
