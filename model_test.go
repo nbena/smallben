@@ -19,6 +19,11 @@ type jobFromRawTest struct {
 	expectedWithSchedule JobWithSchedule
 }
 
+type jobRawToJobTest struct {
+	raw         RawJob
+	expectedJob Job
+}
+
 func (j *jobToRawTest) TestToRaw(t *testing.T) {
 	rawBuilt, err := j.withSchedule.BuildJob()
 	if err != nil {
@@ -72,6 +77,16 @@ func (j *jobFromRawTest) TestFromRaw(t *testing.T) {
 	if !reflect.DeepEqual(withScheduleBuilt.runInput, j.expectedWithSchedule.runInput) {
 		t.Errorf("runInput is different. Got:\n%+v\nExpected:\n%+v\n",
 			withScheduleBuilt.runInput, j.expectedWithSchedule.runInput)
+	}
+}
+
+func (j *jobRawToJobTest) TestJobRawToJob(t *testing.T) {
+	built, err := j.raw.toJob()
+	if err != nil {
+		t.Errorf("Fail to build Job: %s\n", err.Error())
+	}
+	if !reflect.DeepEqual(built, j.expectedJob) {
+		t.Errorf("The toJob is wrong. Got\n%+v\nExpected\n%+v\n", built, j.expectedJob)
 	}
 }
 
@@ -139,6 +154,56 @@ func TestJobToRaw(t *testing.T) {
 
 	for _, pair := range pairs {
 		pair.TestToRaw(t)
+	}
+}
+
+func TestJobRawToJob(t *testing.T) {
+	now := time.Now()
+
+	inputJob1 := CronJobInput{
+		JobID:        1,
+		GroupID:      1,
+		SuperGroupID: 1,
+		OtherInputs: map[string]interface{}{
+			"life": "it seems to fade away",
+		},
+	}
+
+	jobSerialized1, inputSerialized1 := fakeSerialized(t, inputJob1.OtherInputs)
+
+	pairs := []jobRawToJobTest{
+		{
+			raw: RawJob{
+				ID:                 1,
+				GroupID:            1,
+				SuperGroupID:       1,
+				CronID:             0,
+				CronExpression:     "@every 1s",
+				Paused:             false,
+				CreatedAt:          now,
+				UpdatedAt:          now,
+				SerializedJob:      jobSerialized1,
+				SerializedJobInput: inputSerialized1,
+			},
+			expectedJob: Job{
+				ID:             1,
+				GroupID:        1,
+				SuperGroupID:   1,
+				cronID:         0,
+				CronExpression: "@every 1s",
+				paused:         false,
+				createdAt:      now,
+				updatedAt:      now,
+				Job:            &TestCronJob{},
+				JobInput: map[string]interface{}{
+					"life": "it seems to fade away",
+				},
+			},
+		},
+	}
+
+	for _, pair := range pairs {
+		pair.TestJobRawToJob(t)
 	}
 }
 
