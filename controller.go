@@ -1,6 +1,7 @@
 package smallben
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"sync"
 )
@@ -147,18 +148,86 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	return nil
 }
 
-// PauseJobs pause the jobsToAdd whose id are in `jobsID`. It returns an error
-// of type `gorm.ErrRecordNotFound` if some of the jobsToAdd have not been found.
-func (s *SmallBen) PauseJobs(jobsID []int64) error {
+//// PauseJobs pause the jobsToAdd whose id are in `jobsID`. It returns an error
+//// of type `gorm.ErrRecordNotFound` if some of the jobsToAdd have not been found.
+//func (s *SmallBen) PauseJobs(jobsID []int64) error {
+//	s.lock.Lock()
+//	defer s.lock.Unlock()
+//	// grab the jobs
+//	// we need to know the cron id
+//	jobs, err := s.repository.GetRawJobsByIds(jobsID)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// now update them in the database
+//	if err = s.repository.PauseJobs(jobs); err != nil {
+//		return err
+//	}
+//	// if here, we have correctly paused them, so we can go on
+//	// and safely delete them from the database.
+//	s.scheduler.DeleteJobs(jobs)
+//	return nil
+//}
+
+var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of PauseResumeOptions")
+
+// PauseResumeOptions governs the behavior
+// of the PauseJobs and ResumeJobs methods.
+type PauseResumeOptions struct {
+	// JobIDs specifies which jobs will be
+	// paused or resumed. This option is ignored
+	// if it is nil. If it is option is
+	// set, but also other options are set, an error
+	// of type ErrPauseResumeOptionsBad is returned.
+	JobIDs []int64
+	// GroupIDs specifies the group ids
+	// whose jobs will be paused or resumed.
+	GroupIDs []int64
+	// SuperGroupIDs specifies the super group ids
+	// whose jobs will be paused or resumed.
+	SuperGroupIDs []int64
+}
+
+// PauseJobs pauses the jobs according to the filter defined in options.
+// It returns an error of type ErrPauseResumeOptionsBad if the options
+// are malformed.
+func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// grab the jobs
-	// we need to know the cron id
-	jobs, err := s.repository.GetRawJobsByIds(jobsID)
+
+	// check if the struct is correct
+	if options.JobIDs != nil && (options.GroupIDs != nil || options.SuperGroupIDs != nil) {
+		return ErrPauseResumeOptionsBad
+	}
+	if options.JobIDs == nil && options.GroupIDs == nil && options.SuperGroupIDs == nil {
+		return ErrPauseResumeOptionsBad
+	}
+
+	var jobs []RawJob
+	var err error
+
+	if options.JobIDs != nil {
+		jobs, err = s.repository.GetRawJobsByIds(options.JobIDs)
+	} else if options.GroupIDs != nil && options.SuperGroupIDs != nil {
+		jobs, err = s.repository.ListJobs(&ListJobsOptions{
+			GroupIDs:      options.GroupIDs,
+			SuperGroupIDs: options.SuperGroupIDs,
+		})
+	} else if options.GroupIDs != nil {
+		jobs, err = s.repository.ListJobs(&ListJobsOptions{
+			GroupIDs: options.GroupIDs,
+		})
+	} else {
+		jobs, err = s.repository.ListJobs(&ListJobsOptions{
+			SuperGroupIDs: options.SuperGroupIDs,
+		})
+	}
 	if err != nil {
 		return err
 	}
 
+	// now, we have the list of jobs to act on.
 	// now update them in the database
 	if err = s.repository.PauseJobs(jobs); err != nil {
 		return err

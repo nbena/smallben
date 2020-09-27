@@ -124,8 +124,9 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	lenOfJobsBeforeAnything := len(s.smallBen.scheduler.cron.Entries())
 
 	// now pause the first rawJob
+	// using the JobID filter.
 	jobIDToPause := s.jobs[0].ID
-	err = s.smallBen.PauseJobs([]int64{jobIDToPause})
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{JobIDs: []int64{jobIDToPause}})
 	if err != nil {
 		t.Errorf("Fail to pause rawJob: %s\n", err.Error())
 		t.FailNow()
@@ -234,7 +235,7 @@ func (s *SmallBenTestSuite) TestOther(t *testing.T) {
 	}
 
 	// pause one of them
-	err = s.smallBen.PauseJobs([]int64{s.jobs[0].ID})
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{JobIDs: []int64{s.jobs[0].ID}})
 	if err != nil {
 		t.Errorf("Fail to pause jobs: %s\n", err.Error())
 		t.FailNow()
@@ -294,7 +295,7 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// same for pause
-	err = s.smallBen.PauseJobs([]int64{10000})
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{JobIDs: []int64{10000}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// same for resume
