@@ -194,10 +194,10 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	// now do the same but by using supergroup
 	// and the group
 	superGroup := s.jobs[0].SuperGroupID
-	var jobsOfSuperGroup []int64
+	var jobsOfSuperGroupAndGroup []int64
 	for _, job := range s.jobs {
 		if job.GroupID == group && job.SuperGroupID == superGroup {
-			jobsOfSuperGroup = append(jobsOfSuperGroup, job.ID)
+			jobsOfSuperGroupAndGroup = append(jobsOfSuperGroupAndGroup, job.ID)
 		}
 	}
 	err = s.smallBen.PauseJobs(&PauseResumeOptions{
@@ -210,9 +210,9 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	}
 	// now, check the number of entries
 	lenOfJobsAfterThirdPause := len(s.smallBen.scheduler.cron.Entries())
-	if lenOfJobsAfterThirdPause != len(s.jobs)-len(jobsOfSuperGroup) {
+	if lenOfJobsAfterThirdPause != len(s.jobs)-len(jobsOfSuperGroupAndGroup) {
 		t.Errorf("Something went wrong after pause. Got: %d Expected: %d\n",
-			lenOfJobsAfterThirdPause, len(s.jobs)-len(jobsOfSuperGroup))
+			lenOfJobsAfterThirdPause, len(s.jobs)-len(jobsOfSuperGroupAndGroup))
 	}
 
 	// now, resume them using the same options
@@ -229,6 +229,42 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	if lenOfJobsAfterThirdResume != len(s.jobs) {
 		t.Errorf("Something went wrong after resume. Got: %d Expected: %d\n",
 			lenOfJobsAfterThirdResume, len(s.jobs))
+	}
+
+	// now, do the same, but by super group only
+	var jobsOfSuperGroup []int64
+	for _, job := range s.jobs {
+		if job.SuperGroupID == superGroup {
+			jobsOfSuperGroup = append(jobsOfSuperGroup, job.ID)
+		}
+	}
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{
+		SuperGroupIDs: []int64{superGroup},
+	})
+	if err != nil {
+		t.Errorf("Fail to pause jobs by super group id: %s\n", err.Error())
+		t.FailNow()
+	}
+	// now, check the number of entries
+	lenOfJobsAfterFourthPause := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsAfterFourthPause != len(s.jobs)-len(jobsOfSuperGroup) {
+		t.Errorf("Something went wrong after pause. Got: %d Expected: %d\n",
+			lenOfJobsAfterFourthPause, len(s.jobs)-len(jobsOfSuperGroup))
+	}
+
+	// now, resume them using the same options
+	err = s.smallBen.ResumeJobs(&PauseResumeOptions{
+		SuperGroupIDs: []int64{superGroup},
+	})
+	if err != nil {
+		t.Errorf("Fail to resume jobs by super group id: %s\n", err.Error())
+		t.FailNow()
+	}
+	// and check the number of entries
+	lenOfJobsAfterFourthResume := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsAfterFourthResume != len(s.jobs) {
+		t.Errorf("Something went wrong after resume. Got: %d Expected: %d\n",
+			lenOfJobsAfterFourthResume, len(s.jobs))
 	}
 }
 
@@ -392,6 +428,17 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 		JobIDs: []int64{1000},
 	})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+	// now, let's check all the wrong combination of
+	// the PauseResumeOptions
+	// all nil
+	err = s.smallBen.ResumeJobs(&PauseResumeOptions{})
+	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
+	// jobIDs but also other fields
+	err = s.smallBen.ResumeJobs(&PauseResumeOptions{
+		JobIDs:   []int64{1000},
+		GroupIDs: []int64{1000},
+	})
+	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
 
 	// same for update
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{

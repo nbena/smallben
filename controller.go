@@ -1,8 +1,6 @@
 package smallben
 
 import (
-	"errors"
-	"gorm.io/gorm"
 	"sync"
 )
 
@@ -26,14 +24,6 @@ type SmallBen struct {
 	// started. In that case, subsequent calls to the Start
 	// method does not start the scheduler once again.
 	started bool
-}
-
-// Config regulates the internal working of the scheduler.
-type Config struct {
-	// DbDialector is the dialector to use to connect to the database
-	DbDialector gorm.Dialector
-	// DbConfig is the configuration to use to connect to the database.
-	DbConfig gorm.Config
 }
 
 // NewSmallBen creates a new instance of SmallBen.
@@ -77,29 +67,6 @@ func (s *SmallBen) Stop() {
 	<-ctx.Done()
 }
 
-// fill retrieves all the RawJob to execute from the database
-// and then schedules them for execution. In case of errors
-// it is guaranteed that *all* the jobsToAdd retrieved from the
-// database will be cancelled.
-// This method is *idempotent*, call it every time you want,
-// and the scheduler won't be filled in twice.
-func (s *SmallBen) fill() error {
-	if !s.filled {
-		// get all the tests
-		jobs, err := s.repository.GetAllJobsToExecute()
-		// add them to the scheduler to get back the cron_id
-		s.scheduler.AddJobs(jobs)
-		// now, update the db by updating the cron entries
-		err = s.repository.SetCronId(jobs)
-		if err != nil {
-			// if there is an error, remove them from the scheduler
-			s.scheduler.DeleteJobsWithSchedule(jobs)
-		}
-		s.filled = true
-	}
-	return nil
-}
-
 // AddJobs add `jobsToAdd` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
@@ -125,25 +92,6 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	return nil
 }
 
-var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of PauseResumeOptions")
-
-// PauseResumeOptions governs the behavior
-// of the PauseJobs and ResumeJobs methods.
-type PauseResumeOptions struct {
-	// JobIDs specifies which jobs will be
-	// paused or resumed. This option is ignored
-	// if it is nil. If it is option is
-	// set, but also other options are set, an error
-	// of type ErrPauseResumeOptionsBad is returned.
-	JobIDs []int64
-	// GroupIDs specifies the group ids
-	// whose jobs will be paused or resumed.
-	GroupIDs []int64
-	// SuperGroupIDs specifies the super group ids
-	// whose jobs will be paused or resumed.
-	SuperGroupIDs []int64
-}
-
 // DeleteJobs deletes `jobsID` from the scheduler. It returns an error
 // of type `gorm.ErrRecordNotFound` if some of the required jobsToAdd have not been found.
 func (s *SmallBen) DeleteJobs(jobsID []int64) error {
@@ -165,39 +113,6 @@ func (s *SmallBen) DeleteJobs(jobsID []int64) error {
 	// so we can safely remove them from the scheduler.
 	s.scheduler.DeleteJobs(tests)
 	return nil
-}
-
-//// PauseJobs pause the jobsToAdd whose id are in `jobsID`. It returns an error
-//// of type `gorm.ErrRecordNotFound` if some of the jobsToAdd have not been found.
-//func (s *SmallBen) PauseJobs(jobsID []int64) error {
-//	s.lock.Lock()
-//	defer s.lock.Unlock()
-//	// grab the jobs
-//	// we need to know the cron id
-//	jobs, err := s.repository.GetRawJobsByIds(jobsID)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// now update them in the database
-//	if err = s.repository.PauseJobs(jobs); err != nil {
-//		return err
-//	}
-//	// if here, we have correctly paused them, so we can go on
-//	// and safely delete them from the database.
-//	s.scheduler.DeleteJobs(jobs)
-//	return nil
-//}
-
-// Valid checks if o is valid.
-func (o *PauseResumeOptions) Valid() bool {
-	if o.JobIDs != nil && (o.GroupIDs != nil || o.SuperGroupIDs != nil) {
-		return false
-	}
-	if o.JobIDs == nil && o.GroupIDs == nil && o.SuperGroupIDs == nil {
-		return false
-	}
-	return true
 }
 
 // PauseJobs pauses the jobs according to the filter defined in options.
@@ -332,28 +247,4 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		return err
 	}
 	return nil
-}
-
-// getJobsFromOptions returns all the jobs according to options.
-func (s *SmallBen) getJobsFromOptions(options *PauseResumeOptions) ([]RawJob, error) {
-	var jobs []RawJob
-	var err error
-
-	if options.JobIDs != nil {
-		jobs, err = s.repository.GetRawJobsByIds(options.JobIDs)
-	} else if options.GroupIDs != nil && options.SuperGroupIDs != nil {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			GroupIDs:      options.GroupIDs,
-			SuperGroupIDs: options.SuperGroupIDs,
-		})
-	} else if options.GroupIDs != nil {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			GroupIDs: options.GroupIDs,
-		})
-	} else {
-		jobs, err = s.repository.ListJobs(&ListJobsOptions{
-			SuperGroupIDs: options.SuperGroupIDs,
-		})
-	}
-	return jobs, err
 }
