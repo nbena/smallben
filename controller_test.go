@@ -94,7 +94,7 @@ func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 	}
 
 	// let's also retrieve it from the database
-	jobs, err := s.smallBen.repository.GetRawJobsByIds(GetIdsFromJobList(s.jobs))
+	jobs, err := s.smallBen.repository.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobList(s.jobs)})
 	if err != nil {
 		t.Errorf("Fail to get jobs from the db: %s", err.Error())
 	}

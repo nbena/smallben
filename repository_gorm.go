@@ -67,8 +67,11 @@ func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
 
 // GetAllJobsToExecute returns all the jobsToAdd whose `paused` field is set to `false`.
 func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
-	var rawJobs []RawJob
-	if err := r.db.Find(&rawJobs, "paused = false").Error; err != nil {
+	paused := false
+	rawJobs, err := r.ListJobs(&ListJobsOptions{
+		Paused: &paused,
+	})
+	if err != nil {
 		return nil, err
 	}
 	jobs := make([]JobWithSchedule, len(rawJobs))
@@ -82,26 +85,13 @@ func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 	return jobs, nil
 }
 
-// GetRawJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
-// Returns an error of kind `gorm.ErrRecordNotFound` in case
-// there are less jobsToAdd than the requested ones.
-func (r *Repository3) GetRawJobsByIds(jobsID []int64) ([]RawJob, error) {
-	var rawJobs []RawJob
-	result := r.db.Find(&rawJobs, "id in ?", jobsID)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if len(rawJobs) != len(jobsID) {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return rawJobs, nil
-}
-
 // GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
 // Returns an error of kind `gorm.ErrRecordNotFound` in case
 // there are less jobsToAdd than the requested ones.
 func (r *Repository3) GetJobsByIdS(jobsID []int64) ([]JobWithSchedule, error) {
-	rawJobs, err := r.GetRawJobsByIds(jobsID)
+	rawJobs, err := r.ListJobs(&ListJobsOptions{
+		JobIDs: jobsID,
+	})
 	if err != nil {
 		return nil, err
 	}

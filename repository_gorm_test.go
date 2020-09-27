@@ -61,7 +61,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 
 	// retrieve them using GetRawByIds
-	rawJobs, err := r.repository.GetRawJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	rawJobs, err := r.repository.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobsWithScheduleList(r.jobsToAdd)})
 	if err != nil {
 		t.Errorf("Cannot get raw jobs from id: %s\n", err.Error())
 	}
@@ -468,7 +468,7 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJobs", t)
 
 	// get with many -- raw
-	_, err = r.repository.GetRawJobsByIds([]int64{10000})
+	_, err = r.repository.ListJobs(&ListJobsOptions{JobIDs: []int64{10000}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetRawJobs", t)
 
 	// pause
