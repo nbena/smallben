@@ -153,6 +153,29 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 		t.Errorf("Something went wrong after resume. Got %d: Expected :%d",
 			lenOfJobsAfterResume, lenOfJobsBeforeAnything)
 	}
+
+	// now, let's pause all the jobs staying in the first available group
+	group := s.jobs[0].GroupID
+	var jobsOfGroup []int64
+	for _, job := range s.jobs {
+		if job.GroupID == group {
+			jobsOfGroup = append(jobsOfGroup, job.ID)
+		}
+	}
+	err = s.smallBen.PauseJobs(&PauseResumeOptions{
+		GroupIDs: []int64{group},
+	})
+	if err != nil {
+		t.Errorf("Fail to pause jobs by group id: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// now, check the number of entries
+	lenOfJobsAfterSecondPause := len(s.smallBen.scheduler.cron.Entries())
+	if lenOfJobsAfterSecondPause != len(s.jobs)-len(jobsOfGroup) {
+		t.Errorf("Something went wrong after pause. Got: %d Expected: %d\n",
+			lenOfJobsAfterSecondPause, len(s.jobs)-len(jobsOfGroup))
+	}
 }
 
 func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
