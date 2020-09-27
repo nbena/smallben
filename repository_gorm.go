@@ -163,6 +163,22 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 	return err
 }
 
+// ListJobsOptions defines the options
+// to use when listing the jobs
+type ListJobsOptions struct {
+	// Paused controls the `paused` field.
+	// If paused = true list all jobs that have been paused.
+	// If paused = false list all jobs that have not been paused.
+	// If paused = nil list all jobs no matter if they have been paused or not.
+	Paused *bool
+	// GroupID filters the jobs in the given Group ID.
+	// if nil, it is ignored.
+	GroupID *int64
+	// SuperGroupID filters the jobs by the given Super Group ID.
+	// if nil, it is ignored.
+	SuperGroupID *int64
+}
+
 // ListJobs list all jobs.
 // If paused = true list all jobs that have been paused.
 // If paused = false list all jobs that have not been paused.
