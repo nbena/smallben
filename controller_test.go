@@ -449,6 +449,15 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 		}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
+	// let's do a delete with a bad options
+	err = s.smallBen.DeleteJobs(&DeleteOptions{
+		PauseResumeOptions: PauseResumeOptions{
+			JobIDs:   []int64{1000},
+			GroupIDs: []int64{1000},
+		},
+	})
+	checkErrorIsOf(err, ErrPauseResumeOptionsBad, "ErrPauseResumeOptionsBad", t)
+
 	// new, let's require a non-valid schedule
 	err = s.smallBen.UpdateSchedule([]UpdateSchedule{
 		{JobID: s.jobs[0].ID,
