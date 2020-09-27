@@ -240,6 +240,52 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 }
 
+func (r *RepositoryTestSuite) TestList(t *testing.T) {
+	// first, let's add all jobs
+	err := r.repository.AddJobs(r.jobsToAdd)
+	if err != nil {
+		t.Errorf("Cannot add jobs: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	// and retrieve them
+	jobs, err := r.repository.ListJobs(nil)
+	if err != nil {
+		t.Errorf("Cannot list jobs: %s", err.Error())
+	}
+	if len(jobs) != len(r.jobsToAdd) {
+		t.Errorf("Count mismatch. Got: %d Expected: %d\n", len(jobs), len(r.jobsToAdd))
+	}
+
+	// now, pause one of them.
+	err = r.repository.PauseJobs([]RawJob{r.jobsToAdd[0].rawJob})
+	if err != nil {
+		t.Errorf("Cannot pause job: %s", err.Error())
+		t.FailNow()
+	}
+
+	// re-retrieve using paused = true
+	paused := true
+	jobs, err = r.repository.ListJobs(&paused)
+	if err != nil {
+		t.Errorf("Cannot get paused jobs: %s", err.Error())
+	}
+	if len(jobs) != 1 {
+		t.Errorf("Paused = true count mismatch: Got %d Expected: %d", len(jobs), 1)
+	}
+
+	// now do the same using paused = false
+	paused = false
+	jobs, err = r.repository.ListJobs(&paused)
+	if err != nil {
+		t.Errorf("Cannot get unpaused jobs: %s", err.Error())
+	}
+	if len(jobs) != len(r.jobsToAdd)-1 {
+		t.Errorf("Paused = false count mismatch: Got %d Expected: %d",
+			len(jobs), len(r.jobsToAdd)-1)
+	}
+}
+
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
 	if err == nil {
 		t.Errorf("%s error expected. Should have been not nil.\n", msg)
@@ -382,6 +428,16 @@ func TestRepositoryCronId(t *testing.T) {
 		test.setup(t)
 		test.TestCronId(t)
 		test.teardown(false, t)
+	}
+}
+
+func TestRepositoryList(t *testing.T) {
+	tests := buildRepositoryTestSuite(t)
+
+	for _, test := range tests {
+		test.setup(t)
+		test.TestList(t)
+		test.teardown(true, t)
 	}
 }
 

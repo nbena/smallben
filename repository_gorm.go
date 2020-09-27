@@ -163,6 +163,26 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 	return err
 }
 
+// ListJobs list all jobs.
+// If paused = true list all jobs that have been paused.
+// If paused = false list all jobs that have not been paused.
+// If paused = nil list all jobs no matter if they have been paused or not.
+func (r *Repository3) ListJobs(paused *bool) ([]RawJob, error) {
+	var jobs []RawJob
+	var err error
+	if paused == nil {
+		err = r.db.Find(&jobs).Error
+	} else if *paused == false {
+		err = r.db.Find(&jobs, "paused = ?", false).Error
+	} else {
+		err = r.db.Find(&jobs, "paused = ?", true).Error
+	}
+	if err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
 func (r *Repository3) updatePausedField(jobs []RawJob, paused bool) error {
 	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobRawList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
 	if result.Error != nil {
