@@ -12,6 +12,10 @@ type RepositoryGorm struct {
 	db *gorm.DB
 }
 
+func (r *RepositoryGorm) ErrorTypeIfMismatchCount() error {
+	return gorm.ErrRecordNotFound
+}
+
 // NewRepositoryGorm returns an instance of the repository connecting to the given database.
 func NewRepositoryGorm(dialector gorm.Dialector, gormConfig *gorm.Config) (RepositoryGorm, error) {
 	db, err := gorm.Open(dialector, gormConfig)
@@ -54,7 +58,7 @@ func (r *RepositoryGorm) PauseJobs(jobs []RawJob) error {
 	return r.updatePausedField(jobs, true)
 }
 
-// PauseJobs resume jobsToAdd whose id are in `jobsToAdd`.
+// PauseJobs resume jobs whose id are in `jobs`.
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobsToAdd.
 func (r *RepositoryGorm) ResumeJobs(jobs []JobWithSchedule) error {
@@ -160,36 +164,6 @@ func (r *RepositoryGorm) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) erro
 		return nil
 	})
 	return err
-}
-
-// ListJobsOptions defines the options
-// to use when listing the jobs.
-// All options are *combined*, i.e., with an `AND`.
-type ListJobsOptions struct {
-	// Paused controls the `paused` field.
-	// If paused = true list all jobs that have been paused.
-	// If paused = false list all jobs that have not been paused.
-	// If paused = nil list all jobs no matter if they have been paused or not.
-	Paused *bool
-	// GroupIDs filters the jobs in the given Group ID.
-	// if nil, it is ignored.
-	// It makes ListJobs returning all the jobs whose GroupID
-	// is in GroupIDs
-	GroupIDs []int64
-	// SuperGroupIDs filters the jobs by the given Super Group ID.
-	// if nil, it is ignored.
-	// It makes ListJobs returning all the jobs whose SuperGroupID
-	// is in SuperGroupIDs
-	SuperGroupIDs []int64
-	// JobIDs filters the jobs by the given job ID.
-	// This option logically overrides other options
-	// since it is the most specific.
-	JobIDs []int64
-}
-
-// Need to implement the toListOptions interface.
-func (o *ListJobsOptions) toListOptions() ListJobsOptions {
-	return *o
 }
 
 // ListJobs list all jobs using options. If nil, no options will
