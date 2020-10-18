@@ -1,7 +1,6 @@
 package smallben
 
 import (
-	"fmt"
 	"github.com/robfig/cron/v3"
 )
 
@@ -16,131 +15,32 @@ func NewScheduler() Scheduler {
 	}
 }
 
-// AddTests2 adds `test` to the scheduler. It returns an error in case
-// the schedule is invalid, otherwise it never fails.
-// The returned tests contains the modified `cron_id.`.
-func (s *Scheduler) AddTests2(tests []Test) ([]Test, error) {
+// AddJobs adds `jobsToAdd` to the scheduler. This function never fails and updates
+// the input array with the `CronID`.
+func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 
-	schedules := make([]cron.Schedule, len(tests))
-	jobs := make([]cron.Job, len(tests))
+	for i := range jobs {
+		runFunc := jobs[i].run
+		runFuncInput := jobs[i].runInput
 
-	for i, test := range tests {
-		schedule, err := test.schedule()
-		if err != nil {
-			return nil, err
-		}
-		schedules[i] = schedule
-		jobs[i] = test.toRunFunctionInput()
-	}
+		entryID := s.cron.Schedule(jobs[i].schedule, cron.FuncJob(func() {
+			runFunc.Run(runFuncInput)
+		}))
 
-	for i := 0; i < len(schedules); i++ {
-		entryID := s.cron.Schedule(schedules[i], jobs[i])
-		tests[i].CronId = int(entryID)
-	}
-	return tests, nil
-}
-
-func (s *Scheduler) AddUserEvaluationRule(rules []UserEvaluationRule) ([]UserEvaluationRule, error) {
-
-	var collectedEntries []cron.EntryID
-	var err error
-
-	modifiedRules := rules
-
-	defer func() {
-		// if there are errors, then remove
-		// any added entries
-		if err != nil {
-			for _, entry := range collectedEntries {
-				s.cron.Remove(entry)
-			}
-		}
-	}()
-
-	// for each rule
-	for i, rule := range rules {
-		// compute the list of inputs for the function
-		inputs := rule.toRunFunctionInput()
-		// for each of the possible input
-		for j, input := range inputs {
-			var entryID cron.EntryID
-			// add the entry to the scheduler
-			entryID, err = s.cron.AddFunc(getCronSchedule(rule.Tests[j].EverySecond), func() {
-				input.Run()
-			})
-			// we can return without worrying about spurious element
-			// since we have the defer function removing any added element
-			// from the scheduler
-			if err != nil {
-				return nil, err
-			}
-			// otherwise, append the entry to the list
-			collectedEntries = append(collectedEntries, entryID)
-			// and also, store it into the test
-			modifiedRules[i].Tests[j].CronId = int(entryID)
-		}
-	}
-	return modifiedRules, nil
-}
-
-func (s *Scheduler) AddTests(tests []Test) ([]Test, error) {
-
-	var collectedEntries []cron.EntryID
-	var err error
-
-	modifiedTests := tests
-
-	defer func() {
-		// if there are errors, then remove
-		// any added entries
-		if err != nil {
-			for _, entry := range collectedEntries {
-				s.cron.Remove(entry)
-			}
-		}
-	}()
-
-	// for each test
-	for i, test := range tests {
-		input := test.toRunFunctionInput()
-		var entryID cron.EntryID
-		entryID, err = s.cron.AddFunc(getCronSchedule(test.EverySecond), func() {
-			input.Run()
-		})
-		if err != nil {
-			return modifiedTests, err
-		}
-		// otherwise, append the entry id
-		collectedEntries = append(collectedEntries, entryID)
-		modifiedTests[i].CronId = int(entryID)
-	}
-	return modifiedTests, err
-}
-
-// DeleteUserEvaluationRules delete `rules` from the scheduler.
-func (s *Scheduler) DeleteUserEvaluationRules(rules []UserEvaluationRule) {
-	for _, rule := range rules {
-		s.DeleteTests(rule.Tests)
+		jobs[i].rawJob.CronID = int64(entryID)
 	}
 }
 
-// DeleteTests remove `tests` from the scheduler.
-func (s *Scheduler) DeleteTests(tests []Test) {
-	for _, test := range tests {
-		s.cron.Remove(cron.EntryID(test.CronId))
+// DeleteJobsWithSchedule remove `jobsToAdd` from the scheduler. This function never fails.
+func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
+	for _, job := range jobs {
+		s.cron.Remove(cron.EntryID(job.rawJob.CronID))
 	}
 }
 
-func getCronSchedule(seconds int) string {
-	return fmt.Sprintf("@every %ds", seconds)
-}
-
-type runFunctionInput struct {
-	testID               int
-	userEvaluationRuleId int
-	userID               int
-}
-
-func (r *runFunctionInput) Run() {
-	fmt.Printf("Im running\n")
+// DeleteJobs remove `jobsToAdd` from the scheduler.
+func (s *Scheduler) DeleteJobs(jobs []RawJob) {
+	for _, job := range jobs {
+		s.cron.Remove(cron.EntryID(job.CronID))
+	}
 }

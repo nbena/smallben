@@ -1,1 +1,2 @@
 docker run -d --rm -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5435:5432 small_ben_storage
+set -gx TEST_DATABASE_PG "host=localhost dbname=postgres port=5435 user=postgres password=postgres"
