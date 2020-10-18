@@ -79,6 +79,15 @@ func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 	if len(jobs) != len(s.jobs) {
 		t.Errorf("Some jobs have not been added to the db. Got: %d Expected %d\n", len(jobs), len(s.jobs))
 	}
+
+	// and directly using the method from the controller
+	jobsFromController, err := s.smallBen.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobList(s.jobs)})
+	if err != nil {
+		t.Errorf("Fail to get jobs from the controller: %s\n", err.Error())
+	}
+	if len(jobsFromController) != len(s.jobs) {
+		t.Errorf("Some jobs have not been added. Got: %d Expected %d\n", len(jobsFromController), len(s.jobs))
+	}
 }
 
 func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
@@ -462,46 +471,46 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 }
 
 func (s *SmallBenTestSuite) setup() {
-	jobs := []Job{
-		{
-			ID:             1,
-			GroupID:        1,
-			SuperGroupID:   1,
-			CronExpression: "@every 70s",
-			Job:            &SmallBenCronJob{},
-			JobInput: map[string]interface{}{
-				"test_id": 1,
-			},
-		}, {
-			ID:             2,
-			GroupID:        1,
-			SuperGroupID:   1,
-			CronExpression: "@every 62s",
-			Job:            &SmallBenCronJob{},
-			JobInput: map[string]interface{}{
-				"test_id": 2,
-			},
-		}, {
-			ID:             3,
-			GroupID:        2,
-			SuperGroupID:   1,
-			CronExpression: "@every 61s",
-			Job:            &SmallBenCronJob{},
-			JobInput: map[string]interface{}{
-				"test_id": 3,
-			},
-		}, {
-			ID:             4,
-			GroupID:        2,
-			SuperGroupID:   2,
-			CronExpression: "@every 60s",
-			Job:            &SmallBenCronJob{},
-			JobInput: map[string]interface{}{
-				"test_id": 4,
-			},
-		},
-	}
-	s.jobs = jobs
+	//jobs := []Job{
+	//	{
+	//		ID:             1,
+	//		GroupID:        1,
+	//		SuperGroupID:   1,
+	//		CronExpression: "@every 70s",
+	//		Job:            &SmallBenCronJob{},
+	//		JobInput: map[string]interface{}{
+	//			"test_id": 1,
+	//		},
+	//	}, {
+	//		ID:             2,
+	//		GroupID:        1,
+	//		SuperGroupID:   1,
+	//		CronExpression: "@every 62s",
+	//		Job:            &SmallBenCronJob{},
+	//		JobInput: map[string]interface{}{
+	//			"test_id": 2,
+	//		},
+	//	}, {
+	//		ID:             3,
+	//		GroupID:        2,
+	//		SuperGroupID:   1,
+	//		CronExpression: "@every 61s",
+	//		Job:            &SmallBenCronJob{},
+	//		JobInput: map[string]interface{}{
+	//			"test_id": 3,
+	//		},
+	//	}, {
+	//		ID:             4,
+	//		GroupID:        2,
+	//		SuperGroupID:   2,
+	//		CronExpression: "@every 60s",
+	//		Job:            &SmallBenCronJob{},
+	//		JobInput: map[string]interface{}{
+	//			"test_id": 4,
+	//		},
+	//	},
+	//}
+	s.jobs = JobsToUse
 }
 
 func (s *SmallBenTestSuite) teardown(okNotFound bool, t *testing.T) {
@@ -590,4 +599,44 @@ func TestSmallBenError(t *testing.T) {
 		test.TestErrors(t)
 		test.teardown(true, t)
 	}
+}
+
+var JobsToUse = []Job{
+	{
+		ID:             1,
+		GroupID:        1,
+		SuperGroupID:   1,
+		CronExpression: "@every 70s",
+		Job:            &SmallBenCronJob{},
+		JobInput: map[string]interface{}{
+			"test_id": 1,
+		},
+	}, {
+		ID:             2,
+		GroupID:        1,
+		SuperGroupID:   1,
+		CronExpression: "@every 62s",
+		Job:            &SmallBenCronJob{},
+		JobInput: map[string]interface{}{
+			"test_id": 2,
+		},
+	}, {
+		ID:             3,
+		GroupID:        2,
+		SuperGroupID:   1,
+		CronExpression: "@every 61s",
+		Job:            &SmallBenCronJob{},
+		JobInput: map[string]interface{}{
+			"test_id": 3,
+		},
+	}, {
+		ID:             4,
+		GroupID:        2,
+		SuperGroupID:   2,
+		CronExpression: "@every 60s",
+		Job:            &SmallBenCronJob{},
+		JobInput: map[string]interface{}{
+			"test_id": 4,
+		},
+	},
 }

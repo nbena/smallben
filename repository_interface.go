@@ -48,7 +48,7 @@ type Repository interface {
 	SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error
 	// ListJobs list all the jobs present in the job storage backend,
 	// according to `toListOptions`.
-	ListJobs(options toListOptions) ([]RawJob, error)
+	ListJobs(options ToListOptions) ([]RawJob, error)
 	// ErrorTypeIfMismatchCount specifies the error type
 	// to return in case there is a mismatch count
 	// between the number of jobs involved in a backend operation
@@ -82,7 +82,7 @@ type ListJobsOptions struct {
 	JobIDs []int64
 }
 
-// Need to implement the toListOptions interface.
+// Need to implement the ToListOptions interface.
 func (o *ListJobsOptions) toListOptions() ListJobsOptions {
 	return *o
 }

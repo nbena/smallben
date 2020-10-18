@@ -176,7 +176,7 @@ func (r *RepositoryGorm) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) erro
 
 // ListJobs list all jobs using options. If nil, no options will
 // be used, thus returning all the jobs.
-func (r *RepositoryGorm) ListJobs(options toListOptions) ([]RawJob, error) {
+func (r *RepositoryGorm) ListJobs(options ToListOptions) ([]RawJob, error) {
 	var jobs []RawJob
 	var query = r.db.Session(&gorm.Session{WithConditions: true})
 	if options != nil {

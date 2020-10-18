@@ -32,9 +32,9 @@ func (s *SmallBen) fill() error {
 	return nil
 }
 
-// toListOptions is an interface implemented
+// ToListOptions is an interface implemented
 // by structs that can be converted to a ListOptions struct.
-type toListOptions interface {
+type ToListOptions interface {
 	toListOptions() ListJobsOptions
 }
 
@@ -66,7 +66,7 @@ func (o *PauseResumeOptions) Valid() bool {
 	return true
 }
 
-// toListOptions convert to ListJobOptions by preserving the
+// ToListOptions convert to ListJobOptions by preserving the
 // different semantics of the two struct, i.e., on ListJobOptions
 // all options can be combined, while here JobIDs is exclusive.
 func (o *PauseResumeOptions) toListOptions() ListJobsOptions {
@@ -94,7 +94,7 @@ type DeleteOptions struct {
 	Paused *bool
 }
 
-// toListOptions convert to ListJobOptions by preserving the
+// ToListOptions convert to ListJobOptions by preserving the
 // different semantics of the two struct, i.e., on ListJobOptions
 // all options can be combined, while here JobIDs is exclusive.
 func (o *DeleteOptions) toListOptions() ListJobsOptions {

@@ -88,7 +88,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 }
 
 // DeleteJobs deletes permanently jobs according to options.
-// It returns an error of type `gorm.ErrRecordNotFound` if the number
+// It returns an error of type repository.ErrorTypeIfMismatchCount() if the number
 // of deleted jobs does not match the expected one.
 // It returns an error of type ErrPauseResumeOptionsBad if the
 // passed in options are not in a correct format.
@@ -251,4 +251,29 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		return err
 	}
 	return nil
+}
+
+// ListJobs returns the jobs according to `options`.
+// It may fail in case of:
+// - backend error
+// - deserialization error
+func (s *SmallBen) ListJobs(options *ListJobsOptions) ([]Job, error) {
+	// grab the list of raw jobs
+	rawJobs, err := s.repository.ListJobs(options)
+	if err != nil {
+		return nil, err
+	}
+	// the array holding the "parsed" jobs
+	jobs := make([]Job, len(rawJobs))
+	for i, rawJob := range rawJobs {
+		// build the parsed job
+		job, err := rawJob.toJob()
+		// errors in case of deserialization
+		if err != nil {
+			return nil, err
+		}
+		// otherwise just add it
+		jobs[i] = job
+	}
+	return jobs, nil
 }
