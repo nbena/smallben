@@ -96,8 +96,8 @@ func (s *SchedulerTestSuite) setup() {
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),
-				SerializedJob:      nil,
-				SerializedJobInput: nil,
+				SerializedJob:      "",
+				SerializedJobInput: "",
 			},
 			run: &SchedulerTestCronJob{},
 			runInput: CronJobInput{
@@ -120,8 +120,8 @@ func (s *SchedulerTestSuite) setup() {
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),
-				SerializedJob:      nil,
-				SerializedJobInput: nil,
+				SerializedJob:      "",
+				SerializedJobInput: "",
 			},
 			run: &SchedulerTestCronJob{},
 			runInput: CronJobInput{
@@ -144,8 +144,8 @@ func (s *SchedulerTestSuite) setup() {
 				Paused:             false,
 				CreatedAt:          time.Now(),
 				UpdatedAt:          time.Now(),
-				SerializedJob:      nil,
-				SerializedJobInput: nil,
+				SerializedJob:      "",
+				SerializedJobInput: "",
 			},
 			run: &SchedulerTestCronJob{},
 			runInput: CronJobInput{

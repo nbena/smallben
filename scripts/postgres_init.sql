@@ -12,10 +12,14 @@ create table if not exists jobs (
     cron_expression varchar(256) not null,
     -- id of the cron entry
     cron_id integer not null default 0,
-    -- serialized job using gob
-    serialized_job bytea not null,
-    -- serialized input of the job using gob
-    serialized_job_input bytea not null,
+    -- serialized job using base64(gob(job))
+    -- it uses a `text` type instead of a binary,
+    -- to make the Go struct more transparent to the underlying db.
+    serialized_job text not null,
+    -- serialized job input using base64(gob(job))
+    -- it uses a `text` type instead of a binary,
+    -- to make the Go struct more transparent to the underlying db.
+    serialized_job_input text not null,
     -- when the item has been created
     created_at timestamp with time zone not null default current_timestamp,
     -- when the item has been updated last time

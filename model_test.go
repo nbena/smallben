@@ -2,6 +2,7 @@ package smallben
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"io"
 	"reflect"
@@ -123,8 +124,8 @@ func TestJobToRaw(t *testing.T) {
 					Paused:             false,
 					CreatedAt:          now,
 					UpdatedAt:          now,
-					SerializedJob:      []byte{},
-					SerializedJobInput: []byte{},
+					SerializedJob:      "",
+					SerializedJobInput: "",
 				},
 				schedule: scheduleNeverFail(t, 20),
 				run:      &TestCronJob{},
@@ -210,8 +211,8 @@ func TestJobRawToJob(t *testing.T) {
 func TestJobFromRawWithError(t *testing.T) {
 	raw := RawJob{
 		CronExpression:     "@every 1s",
-		SerializedJob:      nil,
-		SerializedJobInput: nil,
+		SerializedJob:      "",
+		SerializedJobInput: "",
 	}
 	_, err := raw.ToJobWithSchedule()
 	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
@@ -237,7 +238,7 @@ func TestJobFromRawWithError(t *testing.T) {
 		t.Errorf("An invalid schedule has been accepted")
 	}
 
-	raw.SerializedJob = []byte("not a valid CronJob")
+	raw.SerializedJob = "not a valid CronJob"
 	_, err = raw.toJob()
 	if err == nil {
 		t.Errorf("A not valid CronJob has been decoded")
@@ -282,8 +283,8 @@ func TestJobFromRaw(t *testing.T) {
 					Paused:             false,
 					CreatedAt:          now,
 					UpdatedAt:          now,
-					SerializedJob:      []byte{},
-					SerializedJobInput: []byte{},
+					SerializedJob:      "",
+					SerializedJobInput: "",
 				},
 				schedule: scheduleNeverFail(t, 1),
 				run:      &TestCronJob{},
@@ -298,7 +299,9 @@ func TestJobFromRaw(t *testing.T) {
 }
 
 // serialize a input for us
-func fakeSerialized(t *testing.T, input map[string]interface{}) ([]byte, []byte) {
+// job: TestCronJob
+// job input: input
+func fakeSerialized(t *testing.T, input map[string]interface{}) (string, string) {
 	var bufferJob bytes.Buffer
 	var bufferInput bytes.Buffer
 
@@ -313,5 +316,5 @@ func fakeSerialized(t *testing.T, input map[string]interface{}) ([]byte, []byte)
 		t.FailNow()
 	}
 
-	return bufferJob.Bytes(), bufferInput.Bytes()
+	return base64.StdEncoding.EncodeToString(bufferJob.Bytes()), base64.StdEncoding.EncodeToString(bufferInput.Bytes())
 }

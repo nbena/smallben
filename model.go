@@ -2,6 +2,7 @@ package smallben
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"github.com/robfig/cron/v3"
 	"time"
@@ -91,12 +92,12 @@ type RawJob struct {
 	// UpdatedAt specifies the last time this object has been updated,
 	// i.e., paused/resumed/schedule updated.
 	UpdatedAt time.Time `gorm:"column:updated_at"`
-	// SerializedJob is the gob-encoded byte array
+	// SerializedJob is the base64(gob-encoded byte array)
 	// of the interface executing this rawJob
-	SerializedJob []byte `gorm:"column:serialized_job;type:bytea"`
-	// SerializedJobInput is the gob-encoded byte array
+	SerializedJob string `gorm:"column:serialized_job"`
+	// SerializedJobInput is the base64(gob-encoded byte array)
 	// of the map containing the argument for the job.
-	SerializedJobInput []byte `gorm:"column:serialized_job_input;type:bytea"`
+	SerializedJobInput string `gorm:"column:serialized_job_input"`
 }
 
 func (j *RawJob) TableName() string {
@@ -120,16 +121,28 @@ func (j *RawJob) decodeSerializedFields() (CronJob, CronJobInput, error) {
 	var decoder *gob.Decoder
 	var err error
 
+	// decode from base64 the serialized job
+	decodedJob, err := base64.StdEncoding.DecodeString(j.SerializedJob)
+	if err != nil {
+		return nil, CronJobInput{}, err
+	}
+
 	// decode the interface executing the rawJob
-	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJob))
+	decoder = gob.NewDecoder(bytes.NewBuffer(decodedJob))
 	var runJob CronJob
 	if err = decoder.Decode(&runJob); err != nil {
 		return nil, CronJobInput{}, err
 	}
 
+	// decode from base64 the serialized job input
+	decodedJobInput, err := base64.StdEncoding.DecodeString(j.SerializedJobInput)
+	if err != nil {
+		return nil, CronJobInput{}, err
+	}
+
 	// decode the map containing the arguments will be passed
 	// to the job
-	decoder = gob.NewDecoder(bytes.NewBuffer(j.SerializedJobInput))
+	decoder = gob.NewDecoder(bytes.NewBuffer(decodedJobInput))
 	var jobInputMap map[string]interface{}
 	// var runJobInput CronJobInput
 	if err = decoder.Decode(&jobInputMap); err != nil {
@@ -220,14 +233,18 @@ func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	if err := encodeJob(encoderJob, j.run); err != nil {
 		return RawJob{}, err
 	}
-	j.rawJob.SerializedJob = bufferJob.Bytes()
+	// finally, encode the bytes to base64
+	j.rawJob.SerializedJob = base64.StdEncoding.EncodeToString(bufferJob.Bytes())
+
+	// now, encode the job input
+	// first, we build the decoded
 	encoderInput := gob.NewEncoder(&bufferInput)
-	// and now encode the map keeping the inputs
-	// of the job.
+	// and finally, encode it
 	if err := encoderInput.Encode(j.runInput.OtherInputs); err != nil {
 		return RawJob{}, err
 	}
-	j.rawJob.SerializedJobInput = bufferInput.Bytes()
+	// finally, encode the bytes to base64
+	j.rawJob.SerializedJobInput = base64.StdEncoding.EncodeToString(bufferInput.Bytes())
 	return j.rawJob, nil
 }
 
