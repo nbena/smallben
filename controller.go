@@ -9,8 +9,8 @@ import (
 // SmallBen is *goroutine-safe*, since all access are protected by
 // a r-w lock.
 type SmallBen struct {
-	// repository is where we store jobsToAdd.
-	repository RepositoryGorm
+	// repository is the storage backend.
+	repository Repository
 	// scheduler is the cron instance.
 	scheduler Scheduler
 	// lock protects access to each operation
@@ -26,18 +26,27 @@ type SmallBen struct {
 	started bool
 }
 
+//// NewSmallBen creates a new instance of SmallBen.
+//// The context is used to connect with the repository.
+//func NewSmallBen(gormConfig *RepositoryGormConfig) (*SmallBen, error) {
+//	repository, err := NewRepositoryGorm(gormConfig.DbDialector, &gormConfig.DbConfig)
+//	if err != nil {
+//		return nil, err
+//	}
+//	scheduler := NewScheduler()
+//	return &SmallBen{
+//		repository: repository,
+//		scheduler:  scheduler,
+//	}, nil
+//}
+
 // NewSmallBen creates a new instance of SmallBen.
-// The context is used to connect with the repository.
-func NewSmallBen(config *Config) (*SmallBen, error) {
-	repository, err := NewRepositoryGorm(config.DbDialector, &config.DbConfig)
-	if err != nil {
-		return nil, err
-	}
+func NewSmallBen(repository Repository) *SmallBen {
 	scheduler := NewScheduler()
 	return &SmallBen{
 		repository: repository,
 		scheduler:  scheduler,
-	}, nil
+	}
 }
 
 // Start starts the SmallBen, by starting the inner scheduler and filling it

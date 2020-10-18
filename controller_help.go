@@ -7,8 +7,8 @@ import (
 
 var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of PauseResumeOptions")
 
-// Config regulates the internal working of the scheduler.
-type Config struct {
+// RepositoryGormConfig regulates the internal working of the scheduler.
+type RepositoryGormConfig struct {
 	// DbDialector is the dialector to use to connect to the database
 	DbDialector gorm.Dialector
 	// DbConfig is the configuration to use to connect to the database.

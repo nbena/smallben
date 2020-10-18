@@ -12,9 +12,9 @@ import (
 )
 
 type SmallBenTestSuite struct {
-	config   Config
-	smallBen *SmallBen
-	jobs     []Job
+	gormConfig RepositoryGormConfig
+	smallBen   *SmallBen
+	jobs       []Job
 }
 
 type TestMap struct {
@@ -42,21 +42,22 @@ func init() {
 }
 
 func (s *SmallBenTestSuite) newSmallBen(t *testing.T) *SmallBen {
-	smallBen, err := NewSmallBen(&s.config)
+	repository, err := NewRepositoryGorm(s.gormConfig.DbDialector, &s.gormConfig.DbConfig)
 	if err != nil {
 		t.Errorf("Cannot create the SmallBen")
 		t.FailNow()
 	}
+	smallBen := NewSmallBen(&repository)
 	return smallBen
 }
 
 func NewSmallBenTestSuite(dialector gorm.Dialector, t *testing.T) *SmallBenTestSuite {
 	s := new(SmallBenTestSuite)
-	config := Config{
+	config := RepositoryGormConfig{
 		DbDialector: dialector,
 		DbConfig:    gorm.Config{},
 	}
-	s.config = config
+	s.gormConfig = config
 
 	s.smallBen = s.newSmallBen(t)
 	return s
@@ -471,14 +472,20 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	}
 
 	// now we even test a wrong connection.
-	wrongConfig := Config{
+	wrongConfig := RepositoryGormConfig{
 		DbDialector: postgres.Open(""),
 		DbConfig:    gorm.Config{},
 	}
-	_, err = NewSmallBen(&wrongConfig)
+
+	_, err = NewRepositoryGorm(wrongConfig.DbDialector, &wrongConfig.DbConfig)
 	if err == nil {
 		t.Errorf("An empty connection has been accepted")
 	}
+
+	//_, err = NewSmallBen(&wrongConfig)
+	//if err == nil {
+	//	t.Errorf("An empty connection has been accepted")
+	//}
 }
 
 func (s *SmallBenTestSuite) setup() {
