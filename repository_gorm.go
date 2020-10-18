@@ -16,13 +16,21 @@ func (r *RepositoryGorm) ErrorTypeIfMismatchCount() error {
 	return gorm.ErrRecordNotFound
 }
 
+// RepositoryGormConfig regulates the internal working of the scheduler.
+type RepositoryGormConfig struct {
+	// Dialector is the dialector to use to connect to the database
+	Dialector gorm.Dialector
+	// Config is the configuration to use to connect to the database.
+	Config gorm.Config
+}
+
 // NewRepositoryGorm returns an instance of the repository connecting to the given database.
-func NewRepositoryGorm(dialector gorm.Dialector, gormConfig *gorm.Config) (RepositoryGorm, error) {
-	db, err := gorm.Open(dialector, gormConfig)
+func NewRepositoryGorm(config *RepositoryGormConfig) (*RepositoryGorm, error) {
+	db, err := gorm.Open(config.Dialector, &config.Config)
 	if err != nil {
-		return RepositoryGorm{}, err
+		return nil, err
 	}
-	return RepositoryGorm{db: db}, nil
+	return &RepositoryGorm{db: db}, nil
 }
 
 // AddJobs adds `jobs` to the database. This operation can fail

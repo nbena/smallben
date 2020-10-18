@@ -26,20 +26,6 @@ type SmallBen struct {
 	started bool
 }
 
-//// NewSmallBen creates a new instance of SmallBen.
-//// The context is used to connect with the repository.
-//func NewSmallBen(gormConfig *RepositoryGormConfig) (*SmallBen, error) {
-//	repository, err := NewRepositoryGorm(gormConfig.DbDialector, &gormConfig.DbConfig)
-//	if err != nil {
-//		return nil, err
-//	}
-//	scheduler := NewScheduler()
-//	return &SmallBen{
-//		repository: repository,
-//		scheduler:  scheduler,
-//	}, nil
-//}
-
 // NewSmallBen creates a new instance of SmallBen.
 func NewSmallBen(repository Repository) *SmallBen {
 	scheduler := NewScheduler()

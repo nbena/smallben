@@ -12,9 +12,8 @@ import (
 )
 
 type SmallBenTestSuite struct {
-	gormConfig RepositoryGormConfig
-	smallBen   *SmallBen
-	jobs       []Job
+	smallBen *SmallBen
+	jobs     []Job
 }
 
 type TestMap struct {
@@ -39,28 +38,6 @@ func init() {
 		recover()
 	}()
 	gob.Register(&SmallBenCronJob{})
-}
-
-func (s *SmallBenTestSuite) newSmallBen(t *testing.T) *SmallBen {
-	repository, err := NewRepositoryGorm(s.gormConfig.DbDialector, &s.gormConfig.DbConfig)
-	if err != nil {
-		t.Errorf("Cannot create the SmallBen")
-		t.FailNow()
-	}
-	smallBen := NewSmallBen(&repository)
-	return smallBen
-}
-
-func NewSmallBenTestSuite(dialector gorm.Dialector, t *testing.T) *SmallBenTestSuite {
-	s := new(SmallBenTestSuite)
-	config := RepositoryGormConfig{
-		DbDialector: dialector,
-		DbConfig:    gorm.Config{},
-	}
-	s.gormConfig = config
-
-	s.smallBen = s.newSmallBen(t)
-	return s
 }
 
 func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
@@ -473,19 +450,15 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 
 	// now we even test a wrong connection.
 	wrongConfig := RepositoryGormConfig{
-		DbDialector: postgres.Open(""),
-		DbConfig:    gorm.Config{},
+		Dialector: postgres.Open(""),
+		Config:    gorm.Config{},
 	}
 
-	_, err = NewRepositoryGorm(wrongConfig.DbDialector, &wrongConfig.DbConfig)
+	_, err = NewRepositoryGorm(&wrongConfig)
 	if err == nil {
 		t.Errorf("An empty connection has been accepted")
 	}
 
-	//_, err = NewSmallBen(&wrongConfig)
-	//if err == nil {
-	//	t.Errorf("An empty connection has been accepted")
-	//}
 }
 
 func (s *SmallBenTestSuite) setup() {
@@ -547,13 +520,24 @@ func (s *SmallBenTestSuite) teardown(okNotFound bool, t *testing.T) {
 	s.smallBen.Stop()
 }
 
-func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
-	dialectors := []gorm.Dialector{
-		postgres.Open(pgConn),
+func newGormRepository(config *RepositoryGormConfig, t *testing.T) Repository {
+	repository, err := NewRepositoryGorm(config)
+	if err != nil {
+		t.Errorf("Cannot open connection: %s\n", err.Error())
+		t.FailNow()
 	}
-	tests := make([]*SmallBenTestSuite, len(dialectors))
-	for i, dialector := range dialectors {
-		tests[i] = NewSmallBenTestSuite(dialector, t)
+	return repository
+}
+
+// Builds the list of test suites to execute.
+func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
+
+	repositories := []Repository{
+		newGormRepository(&RepositoryGormConfig{Dialector: postgres.Open(pgConn)}, t),
+	}
+	tests := make([]*SmallBenTestSuite, len(repositories))
+	for i, repository := range repositories {
+		tests[i] = &SmallBenTestSuite{smallBen: NewSmallBen(repository)}
 	}
 	return tests
 }

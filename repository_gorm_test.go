@@ -41,11 +41,11 @@ type RepositoryTestSuite struct {
 func NewRepositoryTestSuite(dialector gorm.Dialector, t *testing.T) *RepositoryTestSuite {
 	r := new(RepositoryTestSuite)
 	// dialector := postgres.Open(viper.GetString(KeyTestPgDbName))
-	repository, err := NewRepositoryGorm(dialector, &gorm.Config{})
+	repository, err := NewRepositoryGorm(&RepositoryGormConfig{Dialector: dialector, Config: gorm.Config{}})
 	if err != nil {
 		t.FailNow()
 	}
-	r.repository = repository
+	r.repository = *repository
 	return r
 }
 

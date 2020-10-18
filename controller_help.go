@@ -2,18 +2,9 @@ package smallben
 
 import (
 	"errors"
-	"gorm.io/gorm"
 )
 
 var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of PauseResumeOptions")
-
-// RepositoryGormConfig regulates the internal working of the scheduler.
-type RepositoryGormConfig struct {
-	// DbDialector is the dialector to use to connect to the database
-	DbDialector gorm.Dialector
-	// DbConfig is the configuration to use to connect to the database.
-	DbConfig gorm.Config
-}
 
 // fill retrieves all the RawJob to execute from the database
 // and then schedules them for execution. In case of errors
