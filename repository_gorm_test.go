@@ -34,14 +34,14 @@ func (t *TestCronJob) Run(input CronJobInput) {
 }
 
 type RepositoryTestSuite struct {
-	repository Repository3
+	repository RepositoryGorm
 	jobsToAdd  []JobWithSchedule
 }
 
 func NewRepositoryTestSuite(dialector gorm.Dialector, t *testing.T) *RepositoryTestSuite {
 	r := new(RepositoryTestSuite)
 	// dialector := postgres.Open(viper.GetString(KeyTestPgDbName))
-	repository, err := NewRepository3(dialector, &gorm.Config{})
+	repository, err := NewRepositoryGorm(dialector, &gorm.Config{})
 	if err != nil {
 		t.FailNow()
 	}
@@ -69,7 +69,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 		t.Errorf("The number of retrieved test is wrong. Got %d, expected: %d\n", len(rawJobs), len(r.jobsToAdd))
 	}
 	// and also using GetJobsByIds
-	jobsWithSchedule, err := r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobsWithSchedule, err := r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
 		t.Errorf("Cannot get jobs from id: %s\n", err.Error())
 	}
@@ -205,7 +205,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 
 	// and retrieve
-	jobs, err := r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobs, err := r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	counter = 0
 	for i, job := range jobs {
 		if job.rawJob.CronID != counter+10 {
@@ -229,7 +229,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 
 	// retrieve and check
-	jobs, err = r.repository.GetJobsByIdS(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobs, err = r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	for _, job := range jobs {
 		if job.rawJob.CronID != newCronID {
 			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.rawJob.CronID, newCronID)
@@ -464,7 +464,7 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJob", t)
 
 	// get with many
-	_, err = r.repository.GetJobsByIdS([]int64{10000})
+	_, err = r.repository.GetJobsByIds([]int64{10000})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJobs", t)
 
 	// get with many -- raw

@@ -6,22 +6,24 @@ import (
 
 const DefaultCronID = int64(0)
 
-type Repository3 struct {
+// RepositoryGorm implements the Repository
+// interface by the means of GORM.
+type RepositoryGorm struct {
 	db *gorm.DB
 }
 
-// NewRepository3 returns an instance of the repository connecting to the given database.
-func NewRepository3(dialector gorm.Dialector, gormConfig *gorm.Config) (Repository3, error) {
+// NewRepositoryGorm returns an instance of the repository connecting to the given database.
+func NewRepositoryGorm(dialector gorm.Dialector, gormConfig *gorm.Config) (RepositoryGorm, error) {
 	db, err := gorm.Open(dialector, gormConfig)
 	if err != nil {
-		return Repository3{}, err
+		return RepositoryGorm{}, err
 	}
-	return Repository3{db: db}, nil
+	return RepositoryGorm{db: db}, nil
 }
 
-// AddJobs adds `jobsToAdd` to the database. This operation can fail
-// if rawJob serialization fails, or for database errors.
-func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
+// AddJobs adds `jobs` to the database. This operation can fail
+// if the job serialized fails, or for database errors.
+func (r *RepositoryGorm) AddJobs(jobs []JobWithSchedule) error {
 	rawJobs := make([]RawJob, len(jobs))
 	for i, job := range jobs {
 		rawJob, err := job.BuildJob()
@@ -33,8 +35,9 @@ func (r *Repository3) AddJobs(jobs []JobWithSchedule) error {
 	return r.db.Create(&rawJobs).Error
 }
 
-// GetJob returns the rawJob whose id is `jobID`.
-func (r *Repository3) GetJob(jobID int64) (JobWithSchedule, error) {
+// GetJob returns the JobWithSchedule whose id is `jobID`.
+// In case the job is not found, an error of type gorm.ErrRecordNotFound is returned.
+func (r *RepositoryGorm) GetJob(jobID int64) (JobWithSchedule, error) {
 	var rawJob RawJob
 	if err := r.db.First(&rawJob, "id = ?", jobID).Error; err != nil {
 		return JobWithSchedule{}, err
@@ -47,14 +50,14 @@ func (r *Repository3) GetJob(jobID int64) (JobWithSchedule, error) {
 // PauseJobs pause jobsToAdd whose id are in `jobsToAdd`.
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobsToAdd.
-func (r *Repository3) PauseJobs(jobs []RawJob) error {
+func (r *RepositoryGorm) PauseJobs(jobs []RawJob) error {
 	return r.updatePausedField(jobs, true)
 }
 
 // PauseJobs resume jobsToAdd whose id are in `jobsToAdd`.
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobsToAdd.
-func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
+func (r *RepositoryGorm) ResumeJobs(jobs []JobWithSchedule) error {
 	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
 	if result.Error != nil {
 		return result.Error
@@ -65,15 +68,18 @@ func (r *Repository3) ResumeJobs(jobs []JobWithSchedule) error {
 	return nil
 }
 
-// GetAllJobsToExecute returns all the jobsToAdd whose `paused` field is set to `false`.
-func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
+// GetAllJobsToExecute returns all the jobs whose `paused` field is set to `false`.
+func (r *RepositoryGorm) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 	paused := false
+	// build the struct to make the list query
+	// and make the query
 	rawJobs, err := r.ListJobs(&ListJobsOptions{
 		Paused: &paused,
 	})
 	if err != nil {
 		return nil, err
 	}
+	// now, convert the raw jobs to instances of JobWithSchedule.
 	jobs := make([]JobWithSchedule, len(rawJobs))
 	for i, rawJob := range rawJobs {
 		job, err := rawJob.ToJobWithSchedule()
@@ -86,9 +92,11 @@ func (r *Repository3) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 }
 
 // GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
-// Returns an error of kind `gorm.ErrRecordNotFound` in case
+// Returns an error of type `gorm.ErrRecordNotFound` in case
 // there are less jobsToAdd than the requested ones.
-func (r *Repository3) GetJobsByIdS(jobsID []int64) ([]JobWithSchedule, error) {
+func (r *RepositoryGorm) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error) {
+	// built the struct to do the list query
+	// and execute it
 	rawJobs, err := r.ListJobs(&ListJobsOptions{
 		JobIDs: jobsID,
 	})
@@ -106,7 +114,10 @@ func (r *Repository3) GetJobsByIdS(jobsID []int64) ([]JobWithSchedule, error) {
 	return jobs, nil
 }
 
-func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
+// DeleteJobsByIds delete jobs whose id is 'jobsID`, returning an error
+// of type gorm.ErrRecordNotFound if the number of deleted jobs is less
+// then the length of `jobsID`.
+func (r *RepositoryGorm) DeleteJobsByIds(jobsID []int64) error {
 	result := r.db.Delete(&RawJob{}, jobsID)
 	if result.Error != nil {
 		return result.Error
@@ -117,8 +128,8 @@ func (r *Repository3) DeleteJobsByIds(jobsID []int64) error {
 	return nil
 }
 
-// SetCronId updates the cron_id field of `jobsToAdd`.
-func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
+// SetCronId updates the cron_id field of `jobs`.
+func (r *RepositoryGorm) SetCronId(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
 			result := tx.Model(&job.rawJob).Update("cron_id", job.rawJob.CronID)
@@ -134,7 +145,8 @@ func (r *Repository3) SetCronId(jobs []JobWithSchedule) error {
 	return err
 }
 
-func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
+// SetCronIdAndChangeSchedule updates the fields `cron_id` and `cron_expression` of `jobs`.
+func (r *RepositoryGorm) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
 			result := tx.Model(&job.rawJob).Updates(map[string]interface{}{"cron_id": job.rawJob.CronID, "cron_expression": job.rawJob.CronExpression})
@@ -152,7 +164,7 @@ func (r *Repository3) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
 
 // ListJobsOptions defines the options
 // to use when listing the jobs.
-// All options are *combined*.
+// All options are *combined*, i.e., with an `AND`.
 type ListJobsOptions struct {
 	// Paused controls the `paused` field.
 	// If paused = true list all jobs that have been paused.
@@ -170,7 +182,8 @@ type ListJobsOptions struct {
 	// is in SuperGroupIDs
 	SuperGroupIDs []int64
 	// JobIDs filters the jobs by the given job ID.
-	// This option override other options.
+	// This option logically overrides other options
+	// since it is the most specific.
 	JobIDs []int64
 }
 
@@ -180,8 +193,8 @@ func (o *ListJobsOptions) toListOptions() ListJobsOptions {
 }
 
 // ListJobs list all jobs using options. If nil, no options will
-// be used returning all the jobs.
-func (r *Repository3) ListJobs(options toListOptions) ([]RawJob, error) {
+// be used, thus returning all the jobs.
+func (r *RepositoryGorm) ListJobs(options toListOptions) ([]RawJob, error) {
 	var jobs []RawJob
 	var query = r.db.Session(&gorm.Session{WithConditions: true})
 	if options != nil {
@@ -217,7 +230,7 @@ func (r *Repository3) ListJobs(options toListOptions) ([]RawJob, error) {
 	return jobs, err
 }
 
-func (r *Repository3) updatePausedField(jobs []RawJob, paused bool) error {
+func (r *RepositoryGorm) updatePausedField(jobs []RawJob, paused bool) error {
 	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobRawList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
 	if result.Error != nil {
 		return result.Error

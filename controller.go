@@ -10,7 +10,7 @@ import (
 // a r-w lock.
 type SmallBen struct {
 	// repository is where we store jobsToAdd.
-	repository Repository3
+	repository RepositoryGorm
 	// scheduler is the cron instance.
 	scheduler Scheduler
 	// lock protects access to each operation
@@ -29,7 +29,7 @@ type SmallBen struct {
 // NewSmallBen creates a new instance of SmallBen.
 // The context is used to connect with the repository.
 func NewSmallBen(config *Config) (*SmallBen, error) {
-	repository, err := NewRepository3(config.DbDialector, &config.DbConfig)
+	repository, err := NewRepositoryGorm(config.DbDialector, &config.DbConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// first, we grab all the jobs
-	jobsWithScheduleOld, err := s.repository.GetJobsByIdS(GetIdsFromUpdateScheduleList(scheduleInfo))
+	jobsWithScheduleOld, err := s.repository.GetJobsByIds(GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
 		return err
 	}

@@ -30,13 +30,14 @@ type Job struct {
 	// updatedAt specifies the last time this object has been updated,
 	// i.e., paused/resumed/schedule updated.
 	updatedAt time.Time
-	// Job is the unit of work to be executed
+	// Job is the real unit of work to be executed
 	Job CronJob
 	// JobInput is the additional input to pass to the inner Job.
 	JobInput map[string]interface{}
 }
 
-// Converts Job to a JobWithSchedule object.
+// toJobWithSchedule converts Job to a JobWithSchedule object.
+// It returns an error in case the parsing of the cron expression fails.
 func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
 	var result JobWithSchedule
 	// decode the schedule
@@ -68,7 +69,7 @@ func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
 	return result, nil
 }
 
-// RawJob is the modelling a raw rawJob coming from the database.
+// RawJob models a raw rawJob coming from the database.
 type RawJob struct {
 	// ID is a unique ID identifying the rawJob object.
 	// It is chosen by the user.
@@ -102,12 +103,11 @@ func (j *RawJob) TableName() string {
 	return "jobs"
 }
 
-// JobWithSchedule is a rawJob object
+// JobWithSchedule is a RawJob object
 // with a cron.Schedule object in it.
-// The schedule can be accessed by using the Schedule()
-// method.
+// The schedule can be accessed by using the Schedule() method.
 // This object should be created only by calling the method
-// ToJobWithSchedule().
+// toJobWithSchedule().
 type JobWithSchedule struct {
 	rawJob   RawJob
 	schedule cron.Schedule
@@ -201,14 +201,15 @@ func (j *RawJob) ToJobWithSchedule() (JobWithSchedule, error) {
 	return result, nil
 }
 
-// Encode `job`. A separate function is needed because we need to pass
+// encodeJob encodes `job`. A separate function is needed because we need to pass
 // a POINTER to interface.
 func encodeJob(encoder *gob.Encoder, job CronJob) error {
 	return encoder.Encode(&job)
 }
 
 // BuildJob builds the raw version of the inner job, by encoding
-// the code to binary.
+// it to binary. This is needed since, when converting from a `RawJob` to a `JobWithSchedule`,
+// the binary serialization of the Job is not kept in memory.
 func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	var bufferJob bytes.Buffer
 	var bufferInput bytes.Buffer
