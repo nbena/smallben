@@ -59,9 +59,9 @@ func (r *RepositoryGorm) GetJob(jobID int64) (JobWithSchedule, error) {
 	return job, err
 }
 
-// PauseJobs pause jobsToAdd whose id are in `jobsToAdd`.
+// PauseJobs pause jobs whose id are in `jobs`.
 // It returns an error `gorm.ErrRecordNotFound` in case
-// the number of updated rows is different then the length of jobsToAdd.
+// the number of updated rows is different than the length of jobsToAdd.
 func (r *RepositoryGorm) PauseJobs(jobs []RawJob) error {
 	return r.updatePausedField(jobs, true)
 }

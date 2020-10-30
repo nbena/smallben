@@ -12,14 +12,18 @@ type Repository interface {
 	// PauseJobs pause `jobs`, i.e., marks them as paused.
 	// This operation must be atomic.
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
-	//	// the number of updated jobs is different than the number
-	//	// of required jobs, i.e., `len(jobs)`.
+	// the number of updated jobs is different than the number
+	// of required jobs, i.e., `len(jobs)`.
+	// It should update all the jobs it can, i.e., not stopping
+	// at the first ID not found.
 	PauseJobs(jobs []RawJob) error
 	// ResumeJobs resumes `jobs`, i.e., marks them as non-paused.
 	// This operation must be atomic.
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of updated jobs is different than the number
-	// of required jobs, i.e., `len(jobs)~.
+	// of required jobs, i.e., `len(jobs)`.
+	// It should update all the jobs it can, i.e., not stopping
+	// at the first ID not found.
 	ResumeJobs(jobs []JobWithSchedule) error
 	// GetAllJobsToExecute returns all jobs the scheduler
 	// should execute on startup, i.e., all jobs whose `paused` field
