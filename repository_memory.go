@@ -5,11 +5,20 @@ import (
 	"time"
 )
 
+// ErrRecordNotFound is the type of error that MemoryRepository returns
+// when some of the jobs that have been requested/requested for an update/delete
+// have not been found.
+var ErrRecordNotFound = errors.New("the requested record has not been found")
+
+// MemoryRepository implements the Repository
+// interface by the means of a map.
 type MemoryRepository struct {
 	data map[int64]JobWithSchedule
 }
 
-var ErrRecordNotFound = errors.New("the requested record has not been found")
+func (m *MemoryRepository) ErrorTypeIfMismatchCount() error {
+	return ErrRecordNotFound
+}
 
 // AddJobs adds `job` to the in-memory data structure.
 // It never fails. Old jobs are eventually overwritten.
@@ -41,7 +50,7 @@ func (m *MemoryRepository) GetJob(jobID int64) (JobWithSchedule, error) {
 // It updates all the jobs it can, i.e., does not finish
 // when it encounters the first non-existing job.
 func (m *MemoryRepository) PauseJobs(jobs []RawJob) error {
-	return m.updatePausedField(jobs, true)
+	return m.updateFields(jobs, true, true, false, false)
 }
 
 // ResumeJobs resume jobs whose id are in `jobs`.
@@ -53,14 +62,37 @@ func (m *MemoryRepository) ResumeJobs(jobs []JobWithSchedule) error {
 	for i, job := range jobs {
 		rawJobs[i] = job.rawJob
 	}
-	return m.updatePausedField(rawJobs, false)
+	return m.updateFields(rawJobs, true, false, false, false)
+}
+
+// GetAllJobsToExecute returns all the jobs whose `Paused` field is set to `false`.
+func (m *MemoryRepository) GetAllJobsToExecute() ([]JobWithSchedule, error) {
+	paused := false
+	// build the struct to make the list query
+	// and make the query
+	rawJobs, err := m.ListJobs(&ListJobsOptions{
+		Paused: &paused,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// now, convert the raw jobs to instances of JobWithSchedule.
+	jobs := make([]JobWithSchedule, len(rawJobs))
+	for i, rawJob := range rawJobs {
+		job, err := rawJob.ToJobWithSchedule()
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = job
+	}
+	return jobs, nil
 }
 
 // GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
 // Returns an error of type ErrorTypeIfMismatchCount() in case
 // there are less jobs than the requested ones.
 func (m *MemoryRepository) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error) {
-	rawJobs, err := m.ListJObs(&ListJobsOptions{
+	rawJobs, err := m.ListJobs(&ListJobsOptions{
 		JobIDs: jobsID,
 	})
 	if err != nil {
@@ -98,35 +130,39 @@ func (m *MemoryRepository) DeleteJobsByIds(jobsID []int64) error {
 	return nil
 }
 
-// SetCronId updates the cron_id field of `jobs`.
+// SetCronId updates the field CronID of `jobs`.
 // It updates all the jobs contained in `jobs`, returning
 // an error of type ErrorTypeIfMismatchCount() if the number
 // of updated jobs is less than the length of jobs.
 // Still, it does NOT stop on first error.
 func (m *MemoryRepository) SetCronId(jobs []JobWithSchedule) error {
-	count := 0
-	for _, job := range jobs {
-		gotJob, ok := m.data[job.rawJob.ID]
-		if ok {
-			gotJob.rawJob.CronID = job.rawJob.CronID
-			m.data[job.rawJob.ID] = gotJob
-			count += 1
-		}
+	rawJobs := make([]RawJob, len(jobs))
+	for i, job := range jobs {
+		rawJobs[i] = job.rawJob
 	}
-	// check that the number of updated jobs is correct.
-	if count != len(jobs) {
-		return ErrRecordNotFound
-	}
-	return nil
+	return m.updateFields(rawJobs, false, false, true, false)
 }
 
-// ListJObs filters the current map according to options.
+// SetCronIdAndChangeSchedule updates the fields CronID and CronExpression of `jobs`.
+// It updates all the jobs contained in `jobs`, returning
+// an error of type ErrorTypeIfMismatchCount() if the number
+// of updated jobs is less than the length of jobs.
+// Still, it does NOT stop on first error.
+func (m *MemoryRepository) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
+	rawJobs := make([]RawJob, len(jobs))
+	for i, job := range jobs {
+		rawJobs[i] = job.rawJob
+	}
+	return m.updateFields(rawJobs, false, false, true, true)
+}
+
+// ListJobs filters the current map according to options.
 // It never fails except for the following case:
 // - the only required filter option is by job id AND
 // - the length of the returned list is different than the length of
 // 	 the required job id.
 // They should be, in fact, equal, since job ids are unique,
-func (m *MemoryRepository) ListJObs(options ToListOptions) ([]RawJob, error) {
+func (m *MemoryRepository) ListJobs(options ToListOptions) ([]RawJob, error) {
 	var jobs []RawJob
 	var err error
 	for _, job := range m.data {
@@ -220,21 +256,39 @@ func (m *MemoryRepository) ListJObs(options ToListOptions) ([]RawJob, error) {
 	return jobs, err
 }
 
-func (m *MemoryRepository) updatePausedField(jobs []RawJob, value bool) error {
-	var err error = nil
+// updateFields update fields of memorized jobs according to the following rules:
+// - if updatePause is true, then the value of the Paused field is changed according to
+//	 the paused field
+// - if updateCronID is true, then the value of the CronID field is changed to the value
+// 	 of each element in jobs
+// - if updateCronExpression is true, then the value of the CronExpression field is changed
+//   to the value of each element in jobs
+// Returns an error of type ErrorTypeIfMismatchCount() if the number of updated jobs
+// is different than the length of jobs.
+func (m *MemoryRepository) updateFields(jobs []RawJob,
+	updatePause bool, paused bool, updateCronID bool, updateCronExpression bool) error {
+	count := 0
 	for _, job := range jobs {
-		jobToUpdate, ok := m.data[job.ID]
-		// if found, then update
+		gotJob, ok := m.data[job.ID]
 		if ok {
-			jobToUpdate.rawJob.Paused = value
-			jobToUpdate.rawJob.UpdatedAt = time.Now()
-			m.data[job.ID] = jobToUpdate
-		} else {
-			// else fill in the error variable
-			// don't care if we update it multiple times.
-			err = ErrRecordNotFound
-		}
+			if updatePause {
+				gotJob.rawJob.Paused = paused
+			}
+			if updateCronID {
+				gotJob.rawJob.CronID = job.CronID
+			}
+			if updateCronExpression {
+				gotJob.rawJob.CronExpression = job.CronExpression
+			}
 
+			gotJob.rawJob.UpdatedAt = time.Now()
+			m.data[job.ID] = gotJob
+			count += 1
+		}
 	}
-	return err
+	// check that the number of updated jobs is correct.
+	if count != len(jobs) {
+		return ErrRecordNotFound
+	}
+	return nil
 }
