@@ -34,7 +34,7 @@ func (t *TestCronJob) Run(input CronJobInput) {
 }
 
 type RepositoryTestSuite struct {
-	repository RepositoryGorm
+	repository Repository
 	jobsToAdd  []JobWithSchedule
 }
 
@@ -45,7 +45,7 @@ func NewRepositoryTestSuite(dialector gorm.Dialector, t *testing.T) *RepositoryT
 	if err != nil {
 		t.FailNow()
 	}
-	r.repository = *repository
+	r.repository = repository
 	return r
 }
 
@@ -600,7 +600,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 func (r *RepositoryTestSuite) teardown(okNotFound bool, t *testing.T) {
 	err := r.repository.DeleteJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
-		if !(okNotFound && errors.Is(err, gorm.ErrRecordNotFound)) {
+		if !(okNotFound && errors.Is(err, r.repository.ErrorTypeIfMismatchCount())) {
 			t.Errorf("Cannot delete jobs on teardown: %s\n", err.Error())
 		}
 	}
