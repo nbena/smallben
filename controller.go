@@ -52,8 +52,8 @@ func (s *SmallBen) Start() error {
 	return nil
 }
 
-// Stop stops the SmallBen. This call will block until all *running* jobsToAdd
-// have finished.
+// Stop stops the SmallBen. This call will block until
+// all *running* jobs have finished their present execution.
 func (s *SmallBen) Stop() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
