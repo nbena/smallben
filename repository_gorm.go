@@ -126,9 +126,9 @@ func (r *RepositoryGorm) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error)
 	return jobs, nil
 }
 
-// DeleteJobsByIds delete jobs whose id is 'jobsID`, returning an error
+// DeleteJobsByIds delete jobs whose ids are 'jobsID`, returning an error
 // of type gorm.ErrRecordNotFound if the number of deleted jobs is less
-// then the length of `jobsID`.
+// than the length of `jobsID`.
 func (r *RepositoryGorm) DeleteJobsByIds(jobsID []int64) error {
 	result := r.db.Delete(&RawJob{}, jobsID)
 	if result.Error != nil {

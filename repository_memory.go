@@ -77,6 +77,49 @@ func (m *MemoryRepository) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, erro
 	return jobs, nil
 }
 
+// DeleteJobsByIds delete jobs whose ids are 'jobsID`, returning an error
+// of type ErrorTypeIfMismatchCount() if the number of deleted jobs is
+// less than the length of jobsID.
+func (m *MemoryRepository) DeleteJobsByIds(jobsID []int64) error {
+	count := 0
+	for _, jobID := range jobsID {
+		// grab the item to see if it exists
+		if _, ok := m.data[jobID]; !ok {
+			// and delete it incrementing our counter
+			delete(m.data, jobID)
+			count += 1
+		}
+	}
+	// check if the number of deleted jobs
+	// matches the required number of jobs to delete.
+	if count != len(jobsID) {
+		return ErrRecordNotFound
+	}
+	return nil
+}
+
+// SetCronId updates the cron_id field of `jobs`.
+// It updates all the jobs contained in `jobs`, returning
+// an error of type ErrorTypeIfMismatchCount() if the number
+// of updated jobs is less than the length of jobs.
+// Still, it does NOT stop on first error.
+func (m *MemoryRepository) SetCronId(jobs []JobWithSchedule) error {
+	count := 0
+	for _, job := range jobs {
+		gotJob, ok := m.data[job.rawJob.ID]
+		if ok {
+			gotJob.rawJob.CronID = job.rawJob.CronID
+			m.data[job.rawJob.ID] = gotJob
+			count += 1
+		}
+	}
+	// check that the number of updated jobs is correct.
+	if count != len(jobs) {
+		return ErrRecordNotFound
+	}
+	return nil
+}
+
 // ListJObs filters the current map according to options.
 // It never fails except for the following case:
 // - the only required filter option is by job id AND
