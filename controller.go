@@ -62,7 +62,7 @@ func (s *SmallBen) Stop() {
 	<-ctx.Done()
 }
 
-// AddJobs add `jobsToAdd` to the scheduler.
+// AddJobs add `jobs` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
