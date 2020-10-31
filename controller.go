@@ -53,7 +53,7 @@ func (s *SmallBen) Start() error {
 }
 
 // Stop stops the SmallBen. This call will block until
-// all *running* jobs have finished their present execution.
+// all *running* jobs have finished their current execution.
 func (s *SmallBen) Stop() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
