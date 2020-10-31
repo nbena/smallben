@@ -128,7 +128,7 @@ func TestJobToRaw(t *testing.T) {
 					SerializedJobInput: "",
 				},
 				schedule: scheduleNeverFail(t, 20),
-				run:      &TestCronJob{},
+				run:      &TestCronJobNoop{},
 				runInput: CronJobInput{
 					JobID:        1,
 					GroupID:      1,
@@ -195,7 +195,7 @@ func TestJobRawToJob(t *testing.T) {
 				paused:         false,
 				createdAt:      now,
 				updatedAt:      now,
-				Job:            &TestCronJob{},
+				Job:            &TestCronJobNoop{},
 				JobInput: map[string]interface{}{
 					"life": "it seems to fade away",
 				},
@@ -298,7 +298,7 @@ func TestJobFromRaw(t *testing.T) {
 					SerializedJobInput: "",
 				},
 				schedule: scheduleNeverFail(t, 1),
-				run:      &TestCronJob{},
+				run:      &TestCronJobNoop{},
 				runInput: inputJob1,
 			},
 		},
@@ -310,14 +310,14 @@ func TestJobFromRaw(t *testing.T) {
 }
 
 // serialize a input for us
-// job: TestCronJob
+// job: TestCronJobNoop
 // job input: input
 func fakeSerialized(t *testing.T, input map[string]interface{}) (string, string) {
 	var bufferJob bytes.Buffer
 	var bufferInput bytes.Buffer
 
 	encoder := gob.NewEncoder(&bufferJob)
-	testCronJob := &TestCronJob{}
+	testCronJob := &TestCronJobNoop{}
 
 	interfaceEncode(t, encoder, testCronJob)
 

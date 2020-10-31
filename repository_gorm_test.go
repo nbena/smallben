@@ -15,7 +15,7 @@ import (
 const KeyTestPgDbName = "TEST_DATABASE_PG"
 
 var (
-	// accessed by the TestCronJob
+	// accessed by the TestCronJobNoop
 	// indexed by the id of the rawJob
 	accessed = make(map[int64]CronJobInput)
 
@@ -23,13 +23,26 @@ var (
 )
 
 func init() {
-	gob.Register(&TestCronJob{})
+	gob.Register(&TestCronJobNoop{})
+	gob.Register(&TestCronJobModifyMap{})
 }
 
 // fake struct implementing the CronJob interface
-type TestCronJob struct{}
+// it just writes its input into the accessed map
+type TestCronJobNoop struct{}
 
-func (t *TestCronJob) Run(input CronJobInput) {
+func (t *TestCronJobNoop) Run(input CronJobInput) {
+	accessed[input.JobID] = input
+}
+
+// fake struct implementing the CronJob interface
+// it writes its input into the accessed map
+// but the value at input.JobId is the sum
+// of JobID, GroupID and SuperGroupID
+type TestCronJobModifyMap struct{}
+
+func (t *TestCronJobModifyMap) Run(input CronJobInput) {
+	input.JobID = input.JobID + input.GroupID + input.SuperGroupID
 	accessed[input.JobID] = input
 }
 
@@ -115,8 +128,22 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	// and now execute it
 	job.run.Run(job.runInput)
 	// making sure it has been executed
-	if !reflect.DeepEqual(accessed[job.rawJob.ID], r.jobsToAdd[0].runInput) {
-		t.Errorf("The rawJob has not been executed correctly. Got\n%+v\nExpected\n%+v\n", accessed[job.rawJob.ID], r.jobsToAdd[0].runInput)
+	// we have to do some type assertions to make the proper check
+	// since TestCronJobNoop just places its values
+	// but TestCronJobModifyMap sets another value for job id
+	var expectedInput CronJobInput
+	if reflect.TypeOf(job.run) == reflect.TypeOf(&TestCronJobNoop{}) {
+		expectedInput = r.jobsToAdd[0].runInput
+	} else if reflect.TypeOf(job.run) == reflect.TypeOf(&TestCronJobModifyMap{}) {
+		expectedInput = r.jobsToAdd[0].runInput
+		expectedInput.JobID = expectedInput.JobID + expectedInput.GroupID + expectedInput.SuperGroupID
+	} else {
+		t.Errorf("Cannot do type interference. Type is: %s\n", reflect.TypeOf(job.run).String())
+		t.FailNow()
+	}
+	// now, let's compare
+	if !reflect.DeepEqual(accessed[job.rawJob.ID], expectedInput) {
+		t.Errorf("The rawJob has not been executed correctly. Got\n%+v\nExpected\n%+v\n", accessed[job.rawJob.ID], expectedInput)
 	}
 }
 
@@ -499,7 +526,7 @@ func scheduleNeverFail(t *testing.T, seconds int) cron.Schedule {
 }
 
 func (r *RepositoryTestSuite) setup(t *testing.T) {
-	// 2 jobs in (group 1, super group 1)
+	// 3 jobs in (group 1, super group 1)
 	// 1 job in (group 2, super group 1)
 	// 1 job in (group 1, super group 2)
 	// 1 job in (group 3, super group 3)
@@ -511,7 +538,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 				SuperGroupID:   1,
 				CronExpression: "@every 60s",
 			},
-			run: &TestCronJob{},
+			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
 				JobID:        1,
 				GroupID:      1,
@@ -529,7 +556,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 				SuperGroupID:   1,
 				CronExpression: "@every 120s",
 			},
-			run: &TestCronJob{},
+			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
 				JobID:        2,
 				GroupID:      1,
@@ -543,14 +570,14 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 		{
 			rawJob: RawJob{
 				ID:             3,
-				GroupID:        2,
+				GroupID:        1,
 				SuperGroupID:   1,
 				CronExpression: "@every 120s",
 			},
-			run: &TestCronJob{},
+			run: &TestCronJobModifyMap{},
 			runInput: CronJobInput{
 				JobID:        3,
-				GroupID:      2,
+				GroupID:      1,
 				SuperGroupID: 1,
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
@@ -561,13 +588,31 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 		{
 			rawJob: RawJob{
 				ID:             4,
+				GroupID:        2,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
+			},
+			run: &TestCronJobNoop{},
+			runInput: CronJobInput{
+				JobID:        4,
+				GroupID:      2,
+				SuperGroupID: 1,
+				OtherInputs: map[string]interface{}{
+					"when I was a child": "I had fever",
+				},
+			},
+			schedule: scheduleNeverFail(t, 60),
+		},
+		{
+			rawJob: RawJob{
+				ID:             5,
 				GroupID:        1,
 				SuperGroupID:   2,
 				CronExpression: "@every 120s",
 			},
-			run: &TestCronJob{},
+			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        4,
+				JobID:        5,
 				GroupID:      1,
 				SuperGroupID: 2,
 				OtherInputs: map[string]interface{}{
@@ -578,14 +623,14 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 		},
 		{
 			rawJob: RawJob{
-				ID:             5,
+				ID:             6,
 				GroupID:        3,
 				SuperGroupID:   3,
 				CronExpression: "@every 120s",
 			},
-			run: &TestCronJob{},
+			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        5,
+				JobID:        6,
 				GroupID:      3,
 				SuperGroupID: 3,
 				OtherInputs: map[string]interface{}{
