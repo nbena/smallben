@@ -105,7 +105,7 @@ func (r *RepositoryGorm) GetAllJobsToExecute() ([]JobWithSchedule, error) {
 
 // GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
 // Returns an error of type `gorm.ErrRecordNotFound` in case
-// there are less jobsToAdd than the requested ones.
+// there are less jobs than the requested ones.
 func (r *RepositoryGorm) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error) {
 	// built the struct to do the list query
 	// and execute it

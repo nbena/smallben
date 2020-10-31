@@ -46,7 +46,7 @@ func (m *MemoryRepository) PauseJobs(jobs []RawJob) error {
 
 // ResumeJobs resume jobs whose id are in `jobs`.
 // It returns an error of type ErrorTypeIfMismatchCount()
-// In case the number of updated items is different than
+// in case the number of updated items is different than
 // the length of jobs to add.
 func (m *MemoryRepository) ResumeJobs(jobs []JobWithSchedule) error {
 	rawJobs := make([]RawJob, len(jobs))
@@ -54,6 +54,127 @@ func (m *MemoryRepository) ResumeJobs(jobs []JobWithSchedule) error {
 		rawJobs[i] = job.rawJob
 	}
 	return m.updatePausedField(rawJobs, false)
+}
+
+// GetJobsByIds returns all the jobsToAdd whose ids are in `jobsID`.
+// Returns an error of type ErrorTypeIfMismatchCount() in case
+// there are less jobs than the requested ones.
+func (m *MemoryRepository) GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error) {
+	rawJobs, err := m.ListJObs(&ListJobsOptions{
+		JobIDs: jobsID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	jobs := make([]JobWithSchedule, len(rawJobs))
+	for i, rawJob := range rawJobs {
+		job, err := rawJob.ToJobWithSchedule()
+		if err != nil {
+			return nil, err
+		}
+		jobs[i] = job
+	}
+	return jobs, nil
+}
+
+// ListJObs filters the current map according to options.
+// It never fails except for the following case:
+// - the only required filter option is by job id AND
+// - the length of the returned list is different than the length of
+// 	 the required job id.
+// They should be, in fact, equal, since job ids are unique,
+func (m *MemoryRepository) ListJObs(options ToListOptions) ([]RawJob, error) {
+	var jobs []RawJob
+	var err error
+	for _, job := range m.data {
+		if options != nil {
+			// this flag is invalidated
+			// when the first condition does not match
+			flag := true
+			convertedOptions := options.toListOptions()
+			if convertedOptions.Paused != nil {
+				if job.rawJob.Paused != *convertedOptions.Paused {
+					flag = false
+				}
+			}
+			// check the JobIDs option
+			// but only if the flag is not already invalid
+			if convertedOptions.JobIDs != nil && flag {
+				// this flag is set to true if
+				// the current job has a job id which is equal
+				// to an element in convertedOptions.JobIDs.
+				// It is then used to set the value of `flag`.
+				found := false
+				for _, jobID := range convertedOptions.JobIDs {
+					if job.rawJob.ID == jobID {
+						found = true
+						break
+					}
+				}
+				// now set the flag
+				if !found {
+					flag = false
+				}
+			}
+			// check the GroupIDs option
+			// but only if the flag is not already invalid
+			if convertedOptions.GroupIDs != nil && flag {
+				// this flag works as the previous one.
+				found := false
+				for _, groupID := range convertedOptions.GroupIDs {
+					if job.rawJob.GroupID == groupID {
+						found = true
+						break
+					}
+				}
+				// now set the flag
+				if !found {
+					flag = false
+				}
+			}
+			// check the SuperGroupIDs option
+			if convertedOptions.SuperGroupIDs != nil && flag {
+				// this flag works as the previous one.
+				found := false
+				for _, superGroupID := range convertedOptions.SuperGroupIDs {
+					if job.rawJob.SuperGroupID == superGroupID {
+						found = true
+						break
+					}
+				}
+				// now set the flag
+				if !found {
+					flag = false
+				}
+			}
+			// at this point, we have evaluated all
+			// the possible conditions. Since the first invalid match
+			// has set our flag to false, then there is full match only if
+			// flag = true
+			if flag {
+				jobs = append(jobs, job.rawJob)
+			}
+		} else {
+			// if no options, then just add the job
+			jobs = append(jobs, job.rawJob)
+		}
+	}
+	// at this point, we have to make sure that the
+	// returned list matches the required input, i.e.,
+	// if the user has requested only a filter by job id
+	// we have to check that the length of the returned
+	// list is equal to the length of required list of job id,
+	// since job ids are unique.
+	if options != nil {
+		convertedOptions := options.toListOptions()
+		if convertedOptions.JobIDs != nil && convertedOptions.SuperGroupIDs == nil &&
+			convertedOptions.GroupIDs == nil && convertedOptions.Paused == nil {
+			if len(jobs) != len(convertedOptions.JobIDs) {
+				err = ErrRecordNotFound
+			}
+		}
+	}
+	return jobs, err
 }
 
 func (m *MemoryRepository) updatePausedField(jobs []RawJob, value bool) error {
