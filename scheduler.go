@@ -4,6 +4,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+// Scheduler is the struct wrapping cron.
 type Scheduler struct {
 	cron *cron.Cron
 }
