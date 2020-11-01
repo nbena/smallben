@@ -15,7 +15,8 @@ func NewScheduler() Scheduler {
 	}
 }
 
-// AddJobs adds `jobsToAdd` to the scheduler. This function never fails and updates
+// AddJobs adds `jobs` to the scheduler.
+// This function never fails and updates
 // the input array with the `CronID`.
 func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 
