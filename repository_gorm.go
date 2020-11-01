@@ -4,8 +4,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// The CronID of a job that has not been
-// inserted yet.
+// DefaultCronID is the CronID of a job
+// that has not been inserted yet.
 const DefaultCronID = int64(0)
 
 // RepositoryGorm implements the Repository
