@@ -32,7 +32,8 @@ func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 	}
 }
 
-// DeleteJobsWithSchedule remove `jobs` from the scheduler. This function never fails.
+// DeleteJobsWithSchedule remove `jobs` from the scheduler.
+// This function never fails.
 func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 	for _, job := range jobs {
 		s.cron.Remove(cron.EntryID(job.rawJob.CronID))
