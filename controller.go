@@ -66,7 +66,7 @@ func (s *SmallBen) Stop() {
 func (s *SmallBen) AddJobs(jobs []Job) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	// build the JobWithSchedule struct for each requested rawJob
+	// build the JobWithSchedule struct for each requested Job
 	jobsWithSchedule := make([]JobWithSchedule, len(jobs))
 	for i, rawJob := range jobs {
 		job, err := rawJob.toJobWithSchedule()
