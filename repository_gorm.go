@@ -14,6 +14,10 @@ type RepositoryGorm struct {
 	db *gorm.DB
 }
 
+// ErrorTypeIfMismatchCount returns the error returned
+// during operations where the number of involved jobs
+// is different than the number of expected jobs that
+// should have been involved.
 func (r *RepositoryGorm) ErrorTypeIfMismatchCount() error {
 	return gorm.ErrRecordNotFound
 }
