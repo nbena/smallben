@@ -41,6 +41,10 @@ func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 }
 
 // DeleteJobs remove `jobs` from the scheduler.
+// This function never fails, if the job is not
+// in the scheduler, then this is no-op.
+// It, basically, inherits the behavior
+// of the inner scheduler.
 func (s *Scheduler) DeleteJobs(jobs []RawJob) {
 	for _, job := range jobs {
 		s.cron.Remove(cron.EntryID(job.CronID))
