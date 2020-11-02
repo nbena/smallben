@@ -305,7 +305,7 @@ type CronJobInput struct {
 	OtherInputs  map[string]interface{}
 }
 
-// CronJob is the interface jobsToAdd has to implement.
+// CronJob is the interface jobs have to implement.
 // It contains only one single method, `Run`.
 type CronJob interface {
 	Run(input CronJobInput)

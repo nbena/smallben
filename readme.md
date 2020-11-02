@@ -7,6 +7,8 @@ Features:
 - **simple**, both to use and to maintain
 - relies on **well-known** libraries, it just adds a thin layer on top of them
 
+This library can be thought, somehow, as a (much) simpler version of Java [quartz](http://www.quartz-scheduler.org/).
+
  ## Examples
  
  The first thing to do is to **configure the persistent storage**. 
@@ -31,4 +33,12 @@ repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
 })
 ```
 
-The second thing to do is to **register the job structs**.
+The second thing to do is to **register the job structs**. In fact, all the jobs the scheduler execute implement the interface `CronJob`, defined as follows.
+
+```go
+// CronJob is the interface jobs have to implement.
+// It contains only one single method, `Run`.
+type CronJob interface {
+	Run(input CronJobInput)
+}
+```
