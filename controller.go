@@ -26,8 +26,8 @@ type SmallBen struct {
 	started bool
 }
 
-// NewSmallBen creates a new instance of SmallBen.
-func NewSmallBen(repository Repository) *SmallBen {
+// New creates a new instance of SmallBen.
+func New(repository Repository) *SmallBen {
 	scheduler := NewScheduler()
 	return &SmallBen{
 		repository: repository,

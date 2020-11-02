@@ -99,3 +99,46 @@ func init() {
     gob.Register(&FooJob{})
 }
 ```
+
+The third thing to do is to actually create a `Job`, which we later submit to `SmallBen`. Other than `ID`, `GroupID` and `SuperGroupID`, the following field must be specified.
+
+- `CronExpression` to specify the execution interval, following the format used by [cron](https://github.com/robfig/cron/v3)
+- `Job` to specify the actual implementation of `CronJob` to execute
+- `JobInput` to specify other inputs to pass to the `CronJob` implementation. They will be available at `input.OtherInputs`, and they are **static**, i.e., each modification to them is **not persisted**. 
+
+```go
+import (
+    "github.com/nbena/smallben"
+)
+
+job := smallben.Job{
+    ID: 1,
+    GroupID: 1,
+    SuperGroupID: 1,
+    // executed every 5 seconds
+    CronExpression: "@every 5s",
+    Job: &FooJob{},
+    JobInput: make(map[string]interface{}),
+}
+```
+
+The fourth thing to do is to actually create the scheduler. It receives just one parameter, the previously created storage.
+
+```go
+// create
+scheduler := smallben.New(repo)
+```
+
+Next, the scheduler must be started. Starting the scheduler will make it fetching all the `Job` within the storage that must be executed.
+
+```go
+err := scheduler.Start()
+```
+
+Add this point, our `Job` can be added to the scheduler. All operations are done in batches.
+
+```go
+err := scheduler.AddJobs([]Job{job})
+```
+
+That's all.
