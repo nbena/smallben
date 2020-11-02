@@ -68,7 +68,7 @@ dialector := []gorm.Dialector{
 }
 repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
     Dialector: dialector,
-    Config: gorm.Config{}.
+    Config: gorm.Config{},
 })
 ```
 
