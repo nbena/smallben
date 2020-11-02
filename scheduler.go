@@ -10,6 +10,8 @@ type Scheduler struct {
 }
 
 // Returns a new Scheduler.
+// The Scheduler supports scheduling
+// on a per-second basis.
 func NewScheduler() Scheduler {
 	return Scheduler{
 		cron: cron.New(cron.WithSeconds()),
