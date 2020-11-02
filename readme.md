@@ -9,6 +9,45 @@ Features:
 
 This library can be thought, somehow, as a (much) simpler version of Java [quartz](http://www.quartz-scheduler.org/).
 
+## Jobs
+
+A `Job` is the very central `struct` of this library. A `Job` contains, among the others, the following fields, which must be specified by the user.
+
+- `ID`: unique identifier of each job
+- `GroupID`: unique identifier useful to group jobs together
+- `SuperGroupID`: unique identifier useful to group groups of jobs together. For instance, it can be used to model different users. The semantic is left to the user.
+
+Depending on the underlying storage, the `ID` might be unique together in each `GroupID`, and the same might applies for `GroupID` within `SuperGroupID`.
+
+The concrete execution logic of a `Job` is wrapped in the `CronJob` interface, which is defined as follows.
+
+```go
+// CronJob is the interface jobs have to implement.
+// It contains only one single method, `Run`.
+type CronJob interface {
+	Run(input CronJobInput)
+}
+```
+
+The `Run` method takes input a `struct` of type `CronJobInput`, which is defined as follows.
+
+```go
+// CronJobInput is the input passed to the Run function.
+type CronJobInput struct {
+	JobID        int64
+	GroupID      int64
+	SuperGroupID int64
+	OtherInputs  map[string]interface{}
+}
+```
+
+In practice, each (implementation of) `CronJob` receives in input a buch of data containing some information about the job itself. In particular, `OtherInputs` is a map that can contain arbitrary data needed for the job.
+
+Since they are persisted using `gob` serialization, it is important to:
+
+- **register** the concrete types implementing `CronJob` (see below)
+- pay **attention** to updates to the code, since they might break serialization/deserialization.
+
  ## Examples
  
  The first thing to do is to **configure the persistent storage**. 
@@ -33,12 +72,11 @@ repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
 })
 ```
 
-The second thing to do is to **register the job structs**. In fact, all the jobs the scheduler execute implement the interface `CronJob`, defined as follows.
+The second thing to do is to define an implementation of the `CronJob` interface.
 
 ```go
-// CronJob is the interface jobs have to implement.
-// It contains only one single method, `Run`.
-type CronJob interface {
-	Run(input CronJobInput)
+type FooJob struct {}
+
+func(f *FooJob) Run(input CronJobInput) {
 }
 ```
