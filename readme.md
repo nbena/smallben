@@ -48,7 +48,7 @@ Since they are persisted using `gob` serialization, it is important to:
 - **register** the concrete types implementing `CronJob` (see below)
 - pay **attention** to updates to the code, since they might break serialization/deserialization.
 
- ## Examples
+ ## Basic usage
  
  The first thing to do is to **configure the persistent storage**. 
  
@@ -72,7 +72,7 @@ repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
 })
 ```
 
-The second thing to do is to define an implementation of the `CronJob` interface.
+The second thing to do is to **define an implementation** of the `CronJob` interface.
 
 ```go
 import (
@@ -100,17 +100,14 @@ func init() {
 }
 ```
 
-The third thing to do is to actually create a `Job`, which we later submit to `SmallBen`. Other than `ID`, `GroupID` and `SuperGroupID`, the following field must be specified.
+The third thing to do is to actually **create a `Job`**, which we later submit to `SmallBen`. Other than `ID`, `GroupID` and `SuperGroupID`, the following field must be specified.
 
 - `CronExpression` to specify the execution interval, following the format used by [cron](https://github.com/robfig/cron/v3)
 - `Job` to specify the actual implementation of `CronJob` to execute
 - `JobInput` to specify other inputs to pass to the `CronJob` implementation. They will be available at `input.OtherInputs`, and they are **static**, i.e., each modification to them is **not persisted**. 
 
 ```go
-import (
-    "github.com/nbena/smallben"
-)
-
+// Create a Job struct. No builder-style API.
 job := smallben.Job{
     ID: 1,
     GroupID: 1,
@@ -122,23 +119,44 @@ job := smallben.Job{
 }
 ```
 
-The fourth thing to do is to actually create the scheduler. It receives just one parameter, the previously created storage.
+The fourth thing to do is to actually **create the scheduler**. It receives just one parameter, the previously created storage.
 
 ```go
-// create
+// create the scheduler passing
+// in the storage.
 scheduler := smallben.New(repo)
 ```
 
-Next, the scheduler must be started. Starting the scheduler will make it fetching all the `Job` within the storage that must be executed.
+Next, the **scheduler must be started**. Starting the scheduler will make it fetching all the `Job` within the storage that must be executed.
 
 ```go
 err := scheduler.Start()
 ```
 
-Add this point, our `Job` can be added to the scheduler. All operations are done in batches.
+Add this point, our **`Job` can be added to the scheduler**. All operations are done in batches and are **protected by a lock**.
 
 ```go
 err := scheduler.AddJobs([]Job{job})
 ```
 
 That's all.
+
+### Other operations
+
+Other than adding `Job`, other operations can be performed on a `SmallBen` (i.e., scheduler) instance.
+
+- `DeleteJobs` to permanently delete a batch of jobs
+- `PauseJobs` to pause the execution of a batch of jobs, without actually deleting it from the storage
+- `ResumeJobs` to resume the execution of a batch of jobs
+- `UpdateSchedule` to update the execution interval of a batch of jobs
+- `ListJobs` to list jobs, according to some criteria
+
+## Other aspects
+
+**Simplicity**. This library is **extremely** simple, both to use and to write and maintain. New features will be added to the core library only if this aspect is left intact.
+
+**Storage**. The only supported storage is [gorm](https://gorm.io). Using an ORM and a RDBMS might seem an overkill, but actually thanks to `gorm` the code is quite simple, and thanks to RDBMS the data being memorized are quite safe. Furthermore, to quickly experiment it still is possible to `sqlite`.
+
+**Other storage**. The functionalities exposed by `gorm`-backed storage, in fact, implement an interface called `Repository`, which is public. The `SmallBen` `struct` works with that interface, so it would be quite easy to add more backends, if needed.
+
+**Deployment**. In the [scripts](scripts) directory there are the necessary files to start a dockerized `postgres` instance for this library. Just one table is needed.
