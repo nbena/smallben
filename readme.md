@@ -75,8 +75,27 @@ repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
 The second thing to do is to define an implementation of the `CronJob` interface.
 
 ```go
+import (
+    "fmt"
+    "github.com/nbena/smallben"
+)
+
 type FooJob struct {}
 
-func(f *FooJob) Run(input CronJobInput) {
+func(f *FooJob) Run(input smallben.CronJobInput) {
+    fmt.Printf("You are calling me, my ID is: %d, my GroupID is: %d, my SuperGroupID is: %d\n",
+        input.JobID, input.GroupID, input.SuperGroupID)
+}
+```
+
+Now, this implementation must be registered, to make `gob` encoding work. A good place to do it is in the `init()` function.
+
+```go
+import (
+    "encoding/gob"
+)
+
+func init() {
+    gob.Register(&FooJob{})
 }
 ```
