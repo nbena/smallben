@@ -67,7 +67,7 @@ import (
 dialector := []gorm.Dialector{
     postgres.Open("host=localhost dbname=postgres port=5432 user=postgres password=postgres")
 }
-repo, _ := smallben.NewRepositoryGorm(&RepositoryGormConfig{
+repo, _ := smallben.NewRepositoryGorm(&smallben.RepositoryGormConfig{
     Dialector: dialector,
     Config: gorm.Config{},
 })
