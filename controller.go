@@ -128,27 +128,8 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// so we can safely remove them from the scheduler.
 	s.scheduler.DeleteJobs(jobs)
 
-	// actually, we don't know if the deleted jobs
-	// were running or not, so we to find out
-	for _, oldJob := range beforeJobs {
-		found := false
-		for _, gotJob := range jobs {
-			// if found, then the job was
-			// in execution
-			if int64(oldJob.ID) == gotJob.CronID {
-				found = true
-				break
-			}
-		}
-		// found, then the job was in running
-		if found {
-			s.metrics.notPaused.Dec()
-		} else {
-			// otherwise, it was paused
-			s.metrics.paused.Dec()
-		}
-	}
-	s.metrics.total.Sub(float64(len(jobs)))
+	// update the metrics
+	s.metrics.postDelete(beforeJobs, jobs)
 	return nil
 }
 
