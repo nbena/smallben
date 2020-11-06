@@ -91,6 +91,8 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 		s.scheduler.DeleteJobsWithSchedule(jobsWithSchedule)
 		return err
 	}
+	// increment the metrics
+	s.metrics.addJobs(len(jobs))
 	return nil
 }
 
@@ -123,6 +125,9 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// if here, the deletion from the database was fine
 	// so we can safely remove them from the scheduler.
 	s.scheduler.DeleteJobs(jobs)
+
+	// decrement the metrics
+	s.metrics.deleteJobs(len(jobs))
 	return nil
 }
 
@@ -152,6 +157,8 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	// if here, we have correctly paused them, so we can go on
 	// and safely delete them from the database.
 	s.scheduler.DeleteJobs(jobs)
+	// update the metrics
+	s.metrics.pauseJobs(len(jobs))
 	return nil
 }
 
@@ -203,6 +210,8 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 		s.scheduler.DeleteJobsWithSchedule(finalJobs)
 		return err
 	}
+	// update the metrics
+	s.metrics.resumeJobs(len(jobs))
 	return nil
 }
 
@@ -255,8 +264,15 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	if err = s.repository.SetCronIdAndChangeSchedule(jobsWithScheduleNew); err != nil {
 		// in case of errors, remove from the scheduler
 		s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
+		// and update the metrics.
+		// Just need to decrement the number of running
+		// and increment the number of paused.
+		// It is the same as pause()
+		s.metrics.pauseJobs(len(jobsWithScheduleNew))
 		return err
 	}
+	// if everything is fine, no need to
+	// update the metrics
 	return nil
 }
 

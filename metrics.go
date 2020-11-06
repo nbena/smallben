@@ -56,3 +56,27 @@ func (s *SmallBen) fillMetrics() error {
 	s.metrics.paused.Add(float64(len(pausedJobs)))
 	return nil
 }
+
+func (m *metrics) addJobs(size int) {
+	m.total.Add(float64(size))
+	m.notPaused.Add(float64(size))
+}
+
+func (m *metrics) deleteJobs(size int) {
+	m.total.Sub(float64(size))
+	m.notPaused.Sub(float64(size))
+}
+
+// pauseJobs updates the metrics
+// by pausing `size` jobs.
+func (m *metrics) pauseJobs(size int) {
+	m.notPaused.Sub(float64(size))
+	m.paused.Add(float64(size))
+}
+
+// resumeJobs updates the metrics
+// by resuming `size` jobs.
+func (m *metrics) resumeJobs(size int) {
+	m.paused.Sub(float64(size))
+	m.notPaused.Add(float64(size))
+}
