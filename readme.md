@@ -59,6 +59,7 @@ Since they are persisted using `gob` serialization, it is important to:
  
  ```go
 import (
+    "github.com/nbena/smallben"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"    
 )
@@ -66,7 +67,7 @@ import (
 dialector := []gorm.Dialector{
     postgres.Open("host=localhost dbname=postgres port=5432 user=postgres password=postgres")
 }
-repo, _ := NewRepositoryGorm(&RepositoryGormConfig{
+repo, _ := smallben.NewRepositoryGorm(&RepositoryGormConfig{
     Dialector: dialector,
     Config: gorm.Config{},
 })
@@ -77,7 +78,6 @@ The second thing to do is to **define an implementation** of the `CronJob` inter
 ```go
 import (
     "fmt"
-    "github.com/nbena/smallben"
 )
 
 type FooJob struct {}
