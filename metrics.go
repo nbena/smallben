@@ -57,14 +57,12 @@ func (s *SmallBen) fillMetrics() error {
 	return nil
 }
 
+// addJobs updates the metrics
+// by adding `size` jobs, considering them
+// as being scheduled for execution.
 func (m *metrics) addJobs(size int) {
 	m.total.Add(float64(size))
 	m.notPaused.Add(float64(size))
-}
-
-func (m *metrics) deleteJobs(size int) {
-	m.total.Sub(float64(size))
-	m.notPaused.Sub(float64(size))
 }
 
 // pauseJobs updates the metrics
