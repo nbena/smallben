@@ -105,3 +105,28 @@ func (m *metrics) postDelete(beforeJobs []cron.Entry, requestedJobs []RawJob) {
 	}
 	m.total.Sub(float64(len(requestedJobs)))
 }
+
+// registerTo registers the metrics to registry.
+// If registry is nil, then they are registered tto
+// prometheus.DefaultRegister.
+// It exists on the first error.
+func (m *metrics) registerTo(registry *prometheus.Registry) error {
+	var register prometheus.Registerer
+
+	if registry == nil {
+		register = prometheus.DefaultRegisterer
+	} else {
+		register = registry
+	}
+
+	if err := register.Register(m.total); err != nil {
+		return err
+	}
+	if err := register.Register(m.paused); err != nil {
+		return err
+	}
+	if err := register.Register(m.notPaused); err != nil {
+		return err
+	}
+	return nil
+}

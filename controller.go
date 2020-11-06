@@ -1,6 +1,7 @@
 package smallben
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 )
 
@@ -37,6 +38,13 @@ func New(repository Repository) *SmallBen {
 		scheduler:  scheduler,
 		metrics:    newMetrics(),
 	}
+}
+
+// RegisterMetrics registers the prometheus metrics to registry.
+// If registry is nil, then they are registered to the default
+// registry.
+func (s *SmallBen) RegisterMetrics(registry *prometheus.Registry) error {
+	return s.metrics.registerTo(registry)
 }
 
 // Start starts the SmallBen, by starting the inner scheduler and filling it
