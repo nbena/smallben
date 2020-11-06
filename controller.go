@@ -2,6 +2,9 @@ package smallben
 
 import (
 	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // SmallBen is the struct managing the persistent
@@ -24,6 +27,9 @@ type SmallBen struct {
 	// started. In that case, subsequent calls to the Start
 	// method does not start the scheduler once again.
 	started bool
+	// metrics keeps the prometheus metrics
+	// SmallBen export
+	metrics metrics
 }
 
 // New creates a new instance of SmallBen.
@@ -32,6 +38,7 @@ func New(repository Repository) *SmallBen {
 	return &SmallBen{
 		repository: repository,
 		scheduler:  scheduler,
+		metrics:    newMetrics(),
 	}
 }
 
