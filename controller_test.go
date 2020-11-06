@@ -545,6 +545,7 @@ func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
 		newGormRepository(&RepositoryGormConfig{Dialector: postgres.Open(pgConn)}, t),
 	}
 	tests := make([]*SmallBenTestSuite, len(repositories))
+
 	for i, repository := range repositories {
 		tests[i] = &SmallBenTestSuite{smallBen: New(repository)}
 	}

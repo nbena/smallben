@@ -2,7 +2,6 @@ package smallben
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/robfig/cron/v3"
 )
 
@@ -15,19 +14,19 @@ type metrics struct {
 // newMetrics returns a new set of metrics.
 func newMetrics() metrics {
 	return metrics{
-		total: promauto.NewGauge(prometheus.GaugeOpts{
+		total: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "smallben",
 			Subsystem: "scheduler",
 			Name:      "jobs_total",
 			Help:      "Number of total jobs memorized by small ben",
 		}),
-		notPaused: promauto.NewGauge(prometheus.GaugeOpts{
+		notPaused: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "smallben",
 			Subsystem: "scheduler",
 			Name:      "jobs_not_paused",
 			Help:      "Number of jobs scheduled for execution by small ben",
 		}),
-		paused: promauto.NewGauge(prometheus.GaugeOpts{
+		paused: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "smallben",
 			Subsystem: "scheduler",
 			Name:      "jobs_paused",
