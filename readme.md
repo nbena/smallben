@@ -18,7 +18,7 @@ A `Job` is the very central `struct` of this library. A `Job` contains, among th
 - `GroupID`: unique identifier useful to group jobs together
 - `SuperGroupID`: unique identifier useful to group groups of jobs together. For instance, it can be used to model different users. The semantic is left to the user.
 
-Depending on the underlying storage, the `ID` might be unique together in each `GroupID`, and the same might applies for `GroupID` within `SuperGroupID`.
+Depending on the underlying storage, the `ID` might be unique together in each `GroupID`, and the same might applies for `GroupID` within `SuperGroupID`. In fact, this is how the current storage works.
 
 The concrete execution logic of a `Job` is wrapped in the `CronJob` interface, which is defined as follows.
 
