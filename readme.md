@@ -160,4 +160,4 @@ Other than adding `Job`, other operations can be performed on a `SmallBen` (i.e.
 
 **Other storage**. The functionalities exposed by `gorm`-backed storage, in fact, implement an interface called `Repository`, which is public. The `SmallBen` `struct` works with that interface, so it would be quite easy to add more backends, if needed.
 
-**Deployment**. In the [scripts](scripts) directory there are the necessary files to start a dockerized `postgres` instance for this library. Just one table is needed.
+**Deployment**. In the [scripts](scripts) directory there are the necessary files to start a dockerized `postgres` instance for this library. Just one table is needed. For a quicker deployment, one might consider using `SQLite`.
