@@ -5,6 +5,9 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+// metrics is the struct holding
+// the different Prometheus metrics
+// SmallBen exposes.
 type metrics struct {
 	total     prometheus.Gauge
 	notPaused prometheus.Gauge
