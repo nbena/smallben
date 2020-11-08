@@ -6,6 +6,7 @@ Features:
 
 - **simple**, both to use and to maintain
 - relies on **well-known** libraries, it just adds a thin layer on top of them
+- supports [prometheus](https://prometheus.io/) metrics
 
 This library can be thought, somehow, as a (much) simpler version of Java [quartz](http://www.quartz-scheduler.org/).
 
