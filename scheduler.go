@@ -10,11 +10,11 @@ type Scheduler struct {
 }
 
 // Returns a new Scheduler.
-// The Scheduler supports scheduling
-// on a per-second basis.
-func NewScheduler() Scheduler {
+// It takes in input the options to configure the
+// inner scheduler.
+func NewScheduler(options ...cron.Option) Scheduler {
 	return Scheduler{
-		cron: cron.New(cron.WithSeconds()),
+		cron: cron.New(options...),
 	}
 }
 

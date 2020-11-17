@@ -2,6 +2,7 @@ package smallben
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/robfig/cron/v3"
 	"sync"
 )
 
@@ -31,8 +32,8 @@ type SmallBen struct {
 }
 
 // New creates a new instance of SmallBen.
-func New(repository Repository) *SmallBen {
-	scheduler := NewScheduler()
+func New(repository Repository, cronOptions ...cron.Option) *SmallBen {
+	scheduler := NewScheduler(cronOptions...)
 	return &SmallBen{
 		repository: repository,
 		scheduler:  scheduler,

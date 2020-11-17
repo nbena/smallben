@@ -82,7 +82,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 }
 
 func (s *SchedulerTestSuite) setup() {
-	s.scheduler = NewScheduler()
+	s.scheduler = NewScheduler(cron.WithSeconds())
 	s.scheduler.cron.Start()
 
 	s.jobs = []JobWithSchedule{
