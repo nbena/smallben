@@ -7,7 +7,8 @@ import (
 
 // Scheduler is the struct wrapping cron.
 type Scheduler struct {
-	cron *cron.Cron
+	cron   *cron.Cron
+	logger cron.Logger
 }
 
 // SchedulerConfig contains the configuration
@@ -76,10 +77,18 @@ func (c SchedulerConfig) toJobWrappers() []cron.JobWrapper {
 func NewScheduler(config *SchedulerConfig) Scheduler {
 	// build the options from the configuration.
 	options := config.toOptions()
+
+	// use DefaultLogger is no logger is provided
+	var logger cron.Logger
+	if config.WithLogger == nil {
+		logger = DefaultLogger
+	}
+
 	// create the scheduler struct...
 	scheduler := Scheduler{
 		// by passing it the options.
-		cron: cron.New(options...),
+		cron:   cron.New(options...),
+		logger: logger,
 	}
 	return scheduler
 }
@@ -98,6 +107,12 @@ func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 		}))
 
 		jobs[i].rawJob.CronID = int64(entryID)
+
+		s.logger.Info("Added job",
+			"ID", jobs[i].rawJob.ID,
+			"GroupID", jobs[i].rawJob.GroupID,
+			"SuperGroupID", jobs[i].rawJob.SuperGroupID,
+			"CronID", jobs[i].rawJob.CronID)
 	}
 }
 
@@ -105,6 +120,13 @@ func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 // This function never fails.
 func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 	for _, job := range jobs {
+
+		s.logger.Info("Deleted job",
+			"ID", job.rawJob.ID,
+			"GroupID", job.rawJob.GroupID,
+			"SuperGroupID", job.rawJob.SuperGroupID,
+			"CronID", job.rawJob.CronID)
+
 		s.cron.Remove(cron.EntryID(job.rawJob.CronID))
 	}
 }
@@ -116,6 +138,13 @@ func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 // of the inner scheduler.
 func (s *Scheduler) DeleteJobs(jobs []RawJob) {
 	for _, job := range jobs {
+
+		s.logger.Info("Deleted job",
+			"ID", job.ID,
+			"GroupID", job.GroupID,
+			"SuperGroupID", job.SuperGroupID,
+			"CronID", job.CronID)
+
 		s.cron.Remove(cron.EntryID(job.CronID))
 	}
 }
