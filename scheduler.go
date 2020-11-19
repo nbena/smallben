@@ -15,6 +15,9 @@ type Scheduler struct {
 // It provides most of the option for configuring
 // cron through this struct instead of using the Option-style
 // pattern.
+// Note that the parser used to parse cron entries cannot be set,
+// and only the default cron parser works, i.e., no way to set
+// option https://pkg.go.dev/github.com/robfig/cron/v3#WithParser.
 type SchedulerConfig struct {
 	// DelayIfStillRunning delays a job starting
 	// if that job has not finished yet.
@@ -27,10 +30,6 @@ type SchedulerConfig struct {
 	// WithSeconds enable seconds-grained scheduling.
 	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithSeconds
 	WithSeconds bool
-	// WithParser specifies the scheduler parser to use.
-	// If nil, the default one is used.
-	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithParser
-	WithParser cron.ScheduleParser
 	// WithLocation sets the location for the scheduler.
 	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLocation
 	WithLocation *time.Location
