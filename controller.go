@@ -161,7 +161,7 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// we need to know the cron id
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
-		s.logger.Error(err, "Deleting jobs. Fail to retrieve jobs to delete", "Progress", "Error")
+		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 		return err
 	}
 
@@ -170,6 +170,7 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// now delete them
 	s.logger.Info("Deleting jobs", "Progress", "InProgress", "Details", "DeletingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 	if err = s.repository.DeleteJobsByIds(GetIdsFromJobRawList(jobs)); err != nil {
+		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "DeletingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 		return err
 	}
 	s.logger.Info("Deleting jobs ", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDS", GetIdsFromJobRawList(jobs))
@@ -196,27 +197,31 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.logger.Info("Pausing jobs...")
+	s.logger.Info("Pausing jobs", "Progress", "InProgress")
 
 	// grab the corresponding jobs
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
-		s.logger.Error(err, "Pausing jobs. Fail to retrieve jobs to pause")
+		s.logger.Error(err, "Pausing jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 		return err
 	}
 
-	s.logger.Info("Pausing jobs", "IDs", GetIdsFromJobRawList(jobs))
-
+	s.logger.Info("Pausing jobs", "Progress", "InProgress", "Details", "PausingInRepository", "IDs", GetIdsFromJobRawList(jobs))
 	// now, we have the list of jobs to act on.
 	// now update them in the database
 	if err = s.repository.PauseJobs(jobs); err != nil {
+		s.logger.Error(err, "Pausing jobs", "Progress", "Error", "Details", "PausingInRepository", "IDs", GetIdsFromJobRawList(jobs))
 		return err
 	}
 	// if here, we have correctly paused them, so we can go on
 	// and safely delete them from the database.
 	s.scheduler.DeleteJobs(jobs)
+
 	// update the metrics
+	s.logger.Info("Pausing jobs", "Progress", "InProgress", "Details", "PausingInScheduler", "IDs", GetIdsFromJobRawList(jobs))
 	s.metrics.pauseJobs(len(jobs))
+
+	s.logger.Info("Pausing jobs", "Progress", "Done", "IDs", GetIdsFromJobRawList(jobs))
 	return nil
 }
 
@@ -233,9 +238,12 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	s.logger.Info("Resume jobs", "Progress", "InProgress")
+
 	// grab the jobs
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
+		s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 		return err
 	}
 
@@ -247,6 +255,7 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 		if job.CronID == DefaultCronID {
 			jobWithSchedule, err := job.ToJobWithSchedule()
 			if err != nil {
+				s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "BuildJobWithSchedule", "ID", job.ID)
 				return err
 			}
 			finalJobs = append(finalJobs, jobWithSchedule)
@@ -254,22 +263,28 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	}
 
 	// ok, now we mark those jobs as resumed
+	s.logger.Info("Resuming jobs", "Progress", "InProgress", "Details", "ResumingInRepository", "IDs", GetIdsFromJobRawList(jobs))
 	if err = s.repository.ResumeJobs(finalJobs); err != nil {
 		return err
 	}
 
 	// and now add them in the scheduler
+	s.logger.Info("Resuming jobs", "Progress", "InProgress", "Details", "ResumingInScheduler", "IDs", GetIdsFromJobRawList(jobs))
 	s.scheduler.AddJobs(finalJobs)
 
 	// now, update the database by setting the cron id
+	s.logger.Info("Resuming jobs", "Progress", "InProgress", "Details", "SetCronID", "IDs", GetIdsFromJobRawList(jobs))
 	if err = s.repository.SetCronId(finalJobs); err != nil {
+		s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "SetCronID", "IDs", GetIdsFromJobRawList(jobs))
 		// in case there have been errors, we clean up the scheduler too
 		// leaving the state unchanged.
+		s.logger.Info("Resuming jobs", "Progress", "Error", "Details", "DeletingFromScheduler", GetIdsFromJobRawList(jobs))
 		s.scheduler.DeleteJobsWithSchedule(finalJobs)
 		return err
 	}
 	// update the metrics
 	s.metrics.resumeJobs(len(jobs))
+	s.logger.Info("Resuming jobs", "Progress", "Done", "IDs", GetIdsFromJobRawList(jobs))
 	return nil
 }
 
