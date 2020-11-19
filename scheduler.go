@@ -51,7 +51,23 @@ func (c *SchedulerConfig) toOptions() []cron.Option {
 	if c.WithLocation != nil {
 		options = append(options, cron.WithLocation(c.WithLocation))
 	}
+	wrappers := c.toJobWrappers()
+	options = append(options, cron.WithChain(wrappers...))
 	return options
+}
+
+// toJobWrappers returns a list of cron.JobWrapper
+// to apply from the given configuration. They are registered
+// in method toOption.
+func (c SchedulerConfig) toJobWrappers() []cron.JobWrapper {
+	var wrappers []cron.JobWrapper
+	if c.DelayIfStillRunning {
+		wrappers = append(wrappers, cron.DelayIfStillRunning(c.WithLogger))
+	}
+	if c.SkipIfStillRunning {
+		wrappers = append(wrappers, cron.SkipIfStillRunning(c.WithLogger))
+	}
+	return wrappers
 }
 
 // Returns a new Scheduler.
@@ -61,10 +77,11 @@ func NewScheduler(config *SchedulerConfig) Scheduler {
 	// build the options from the configuration.
 	options := config.toOptions()
 	// create the scheduler struct...
-	return Scheduler{
-		// by passing it the options...
+	scheduler := Scheduler{
+		// by passing it the options.
 		cron: cron.New(options...),
 	}
+	return scheduler
 }
 
 // AddJobs adds `jobs` to the scheduler.
