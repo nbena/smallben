@@ -513,7 +513,7 @@ func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
 	tests := make([]*SmallBenTestSuite, len(repositories))
 
 	for i, repository := range repositories {
-		tests[i] = &SmallBenTestSuite{smallBen: New(repository, cron.WithSeconds())}
+		tests[i] = &SmallBenTestSuite{smallBen: New(repository, &SchedulerConfig{WithSeconds: true})}
 	}
 	return tests
 }

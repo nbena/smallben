@@ -39,11 +39,31 @@ type SchedulerConfig struct {
 	WithLogger cron.Logger
 }
 
+// toOptions returns a list of cron.Option to apply
+// from the given configuration
+func (c *SchedulerConfig) toOptions() []cron.Option {
+	var options []cron.Option
+	if c.WithSeconds {
+		options = append(options, cron.WithSeconds())
+	}
+	if c.WithLogger != nil {
+		options = append(options, cron.WithLogger(c.WithLogger))
+	}
+	if c.WithLocation != nil {
+		options = append(options, cron.WithLocation(c.WithLocation))
+	}
+	return options
+}
+
 // Returns a new Scheduler.
 // It takes in input the options to configure the
 // inner scheduler.
-func NewScheduler(options ...cron.Option) Scheduler {
+func NewScheduler(config *SchedulerConfig) Scheduler {
+	// build the options from the configuration.
+	options := config.toOptions()
+	// create the scheduler struct...
 	return Scheduler{
+		// by passing it the options...
 		cron: cron.New(options...),
 	}
 }
