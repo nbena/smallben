@@ -295,9 +295,12 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	s.logger.Info("Updating schedule", "Progress", "InProgress", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 	// first, we grab all the jobs
 	jobsWithScheduleOld, err := s.repository.GetJobsByIds(GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
+		s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 		return err
 	}
 
@@ -313,6 +316,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		// build the cron.Schedule object from
 		newSchedule, err := scheduleInfo[i].schedule()
 		if err != nil {
+			s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "BuildingJobWithSchedule", "ID", scheduleInfo[i].JobID)
 			return err
 		}
 		// and now, the JobWithSchedule
@@ -328,15 +332,22 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 	}
 
 	// now, remove the jobsToAdd from the scheduler
+	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 	s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 
 	// now, we re-add them to the scheduler
+	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "AddingToScheduler", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 	s.scheduler.AddJobs(jobsWithScheduleNew)
 
 	// and update the database
+	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "UpdatingInRepository", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 	if err = s.repository.SetCronIdAndChangeSchedule(jobsWithScheduleNew); err != nil {
+		s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "UpdatingInRepository", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
+
 		// in case of errors, remove from the scheduler
+		s.logger.Info("Updating schedule", "Progress", "Cleaning", "Details", "DeleteFromScheduler", "IDs", GetIdsFromUpdateScheduleList(scheduleInfo))
 		s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
+
 		// and update the metrics.
 		// Just need to decrement the number of running
 		// and increment the number of paused.
