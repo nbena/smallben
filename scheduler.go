@@ -2,11 +2,41 @@ package smallben
 
 import (
 	"github.com/robfig/cron/v3"
+	"time"
 )
 
 // Scheduler is the struct wrapping cron.
 type Scheduler struct {
 	cron *cron.Cron
+}
+
+// SchedulerConfig contains the configuration
+// for the scheduler.
+// It provides most of the option for configuring
+// cron through this struct instead of using the Option-style
+// pattern.
+type SchedulerConfig struct {
+	// DelayIfStillRunning delays a job starting
+	// if that job has not finished yet.
+	// Equivalent to attaching: https://pkg.go.dev/github.com/robfig/cron/v3#DelayIfStillRunning
+	DelayIfStillRunning bool
+	// SkipIfStillRunning skips a job starting
+	// if that job has not finished yet.
+	// Equivalent to attaching: https://pkg.go.dev/github.com/robfig/cron/v3#SkipIfStillRunning
+	SkipIfStillRunning bool
+	// WithSeconds enable seconds-grained scheduling.
+	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithSeconds
+	WithSeconds bool
+	// WithParser specifies the scheduler parser to use.
+	// If nil, the default one is used.
+	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithParser
+	WithParser cron.ScheduleParser
+	// WithLocation sets the location for the scheduler.
+	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLocation
+	WithLocation *time.Location
+	// WithLogger specifies the logger to use.
+	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLogger
+	WithLogger cron.Logger
 }
 
 // Returns a new Scheduler.
