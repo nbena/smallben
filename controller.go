@@ -65,42 +65,42 @@ func (s *SmallBen) RegisterMetrics(registry *prometheus.Registry) error {
 // in with the needed RawJob.
 // This call is idempotent and goroutine-safe.
 func (s *SmallBen) Start() error {
-	s.logger.Info("Starting")
+	s.logger.Info("Starting", "Progress", "InProgress")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if !s.started {
-		s.logger.Info("SmallBen has not started yet")
+		s.logger.Info("Starting", "Progress", "InProgress", "Details", "Starting")
 		// start the scheduler if not started yet.
 		s.scheduler.cron.Start()
 		// and mark it as started.
 		s.started = true
 		// now, we fill in the scheduler
-		s.logger.Info("Filling...")
+		s.logger.Info("Starting", "Progress", "InProgress", "Details", "Filling")
 		var err error
 		if err = s.fill(); err != nil {
-			s.logger.Info("Filling done")
+			s.logger.Info("Starting", "Progress", "InProgress", "Details", "Filling done")
 		}
 		return err
 	}
-	s.logger.Info("Starting done")
+	s.logger.Info("Starting", "Progress", "Done")
 	return nil
 }
 
 // Stop stops the SmallBen. This call will block until
 // all *running* jobs have finished their current execution.
 func (s *SmallBen) Stop() {
-	s.logger.Info("Stopping")
+	s.logger.Info("Stopping", "Progress", "InProgress")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	ctx := s.scheduler.cron.Stop()
 	// Wait on ctx.Done() till all jobsToAdd have finished, then left.
 	<-ctx.Done()
-	s.logger.Info("Stopping done")
+	s.logger.Info("Stopping", "Progress", "Done")
 }
 
 // AddJobs add `jobs` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
-	s.logger.Info("Adding jobs")
+	s.logger.Info("Adding jobs", "Progress", "InProgress")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// build the JobWithSchedule struct for each requested Job
@@ -115,20 +115,24 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 	}
 
 	// now, add them to the scheduler
-	s.logger.Info("Adding jobs to the scheduler")
+	s.logger.Info("Adding jobs", "Progress", "InProgress", "Details", "AddingToScheduler", "IDs", GetIdsFromJobList(jobs))
 	s.scheduler.AddJobs(jobsWithSchedule)
 
 	// now, store them in the database
-	s.logger.Info("Adding jobs to the database")
+	s.logger.Info("Adding jobs", "Progress", "InProgress", "Details", "AddingToRepository", "IDs", GetIdsFromJobList(jobs))
+
 	if err := s.repository.AddJobs(jobsWithSchedule); err != nil {
 		// in case of errors, we remove all those jobs from the scheduler
-		s.logger.Error(err, "Fail to add jobs to the database. Cleaning the scheduler")
+		s.logger.Error(err, "Adding jobs", "Progress", "Error", "Details", "CleaningScheduler", "IDs", GetIdsFromJobList(jobs))
+
 		s.scheduler.DeleteJobsWithSchedule(jobsWithSchedule)
-		s.logger.Info("Fail to add jobs to the database. Cleaning the scheduler: done")
+
+		s.logger.Info("Adding jobs", "Progress", "Error", "Details", "CleaningSchedulerDone", "IDs", GetIdsFromJobList(jobs))
 		return err
 	}
 	// increment the metrics
 	s.metrics.addJobs(len(jobs))
+	s.logger.Info("Adding jobs", "Progress", "Done", "IDs", GetIdsFromJobList(jobs))
 	return nil
 }
 
@@ -143,6 +147,8 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 		return ErrPauseResumeOptionsBad
 	}
 
+	s.logger.Info("Deleting jobs", "Progress", "InProgress")
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -155,13 +161,18 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// we need to know the cron id
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
+		s.logger.Error(err, "Deleting jobs. Fail to retrieve jobs to delete", "Progress", "Error")
 		return err
 	}
 
+	s.logger.Info("Deleting jobs", "Progress", "InProgress", "IDs", GetIdsFromJobRawList(jobs))
+
 	// now delete them
+	s.logger.Info("Deleting jobs", "Progress", "InProgress", "Details", "DeletingFromRepository", "IDS", GetIdsFromJobRawList(jobs))
 	if err = s.repository.DeleteJobsByIds(GetIdsFromJobRawList(jobs)); err != nil {
 		return err
 	}
+	s.logger.Info("Deleting jobs ", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDS", GetIdsFromJobRawList(jobs))
 
 	// if here, the deletion from the database was fine
 	// so we can safely remove them from the scheduler.
@@ -169,6 +180,7 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 
 	// update the metrics
 	s.metrics.postDelete(beforeJobs, jobs)
+	s.logger.Info("Deleting jobs", "Progress", "Done", "IDS", GetIdsFromJobRawList(jobs))
 	return nil
 }
 
@@ -184,11 +196,16 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	s.logger.Info("Pausing jobs...")
+
 	// grab the corresponding jobs
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
+		s.logger.Error(err, "Pausing jobs. Fail to retrieve jobs to pause")
 		return err
 	}
+
+	s.logger.Info("Pausing jobs", "IDs", GetIdsFromJobRawList(jobs))
 
 	// now, we have the list of jobs to act on.
 	// now update them in the database
