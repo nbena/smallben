@@ -1,9 +1,19 @@
 package smallben
 
 import (
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 )
+
+// Config is the struct configuring the overall
+// SmallBen object.
+type Config struct {
+	// SchedulerConfig configures the scheduler
+	schedulerConfig SchedulerConfig
+	// Logger is the logger to use.
+	Logger logr.Logger
+}
 
 // SmallBen is the struct managing the persistent
 // scheduler state.
@@ -28,6 +38,8 @@ type SmallBen struct {
 	// metrics keeps the prometheus metrics
 	// SmallBen export
 	metrics metrics
+	// logger is the logger used
+	logger logr.Logger
 }
 
 // New creates a new instance of SmallBen.
@@ -53,31 +65,42 @@ func (s *SmallBen) RegisterMetrics(registry *prometheus.Registry) error {
 // in with the needed RawJob.
 // This call is idempotent and goroutine-safe.
 func (s *SmallBen) Start() error {
+	s.logger.Info("Starting")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if !s.started {
+		s.logger.Info("SmallBen has not started yet")
 		// start the scheduler if not started yet.
 		s.scheduler.cron.Start()
 		// and mark it as started.
 		s.started = true
 		// now, we fill in the scheduler
-		return s.fill()
+		s.logger.Info("Filling...")
+		var err error
+		if err = s.fill(); err != nil {
+			s.logger.Info("Filling done")
+		}
+		return err
 	}
+	s.logger.Info("Starting done")
 	return nil
 }
 
 // Stop stops the SmallBen. This call will block until
 // all *running* jobs have finished their current execution.
 func (s *SmallBen) Stop() {
+	s.logger.Info("Stopping")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	ctx := s.scheduler.cron.Stop()
 	// Wait on ctx.Done() till all jobsToAdd have finished, then left.
 	<-ctx.Done()
+	s.logger.Info("Stopping done")
 }
 
 // AddJobs add `jobs` to the scheduler.
 func (s *SmallBen) AddJobs(jobs []Job) error {
+	s.logger.Info("Adding jobs")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// build the JobWithSchedule struct for each requested Job
@@ -90,12 +113,18 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 		}
 		jobsWithSchedule[i] = job
 	}
+
 	// now, add them to the scheduler
+	s.logger.Info("Adding jobs to the scheduler")
 	s.scheduler.AddJobs(jobsWithSchedule)
+
 	// now, store them in the database
+	s.logger.Info("Adding jobs to the database")
 	if err := s.repository.AddJobs(jobsWithSchedule); err != nil {
 		// in case of errors, we remove all those jobs from the scheduler
+		s.logger.Error(err, "Fail to add jobs to the database. Cleaning the scheduler")
 		s.scheduler.DeleteJobsWithSchedule(jobsWithSchedule)
+		s.logger.Info("Fail to add jobs to the database. Cleaning the scheduler: done")
 		return err
 	}
 	// increment the metrics

@@ -34,9 +34,10 @@ type SchedulerConfig struct {
 	// WithLocation sets the location for the scheduler.
 	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLocation
 	WithLocation *time.Location
-	// WithLogger specifies the logger to use.
-	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLogger
-	WithLogger cron.Logger
+	// withLogger specifies the logger to use.
+	// Equivalent to: https://pkg.go.dev/github.com/robfig/cron/v3#WithLogger.
+	// Not directly exported because it must be set from the outside.
+	withLogger cron.Logger
 }
 
 // toOptions returns a list of cron.Option to apply
@@ -46,8 +47,8 @@ func (c *SchedulerConfig) toOptions() []cron.Option {
 	if c.WithSeconds {
 		options = append(options, cron.WithSeconds())
 	}
-	if c.WithLogger != nil {
-		options = append(options, cron.WithLogger(c.WithLogger))
+	if c.withLogger != nil {
+		options = append(options, cron.WithLogger(c.withLogger))
 	}
 	if c.WithLocation != nil {
 		options = append(options, cron.WithLocation(c.WithLocation))
@@ -63,10 +64,10 @@ func (c *SchedulerConfig) toOptions() []cron.Option {
 func (c SchedulerConfig) toJobWrappers() []cron.JobWrapper {
 	var wrappers []cron.JobWrapper
 	if c.DelayIfStillRunning {
-		wrappers = append(wrappers, cron.DelayIfStillRunning(c.WithLogger))
+		wrappers = append(wrappers, cron.DelayIfStillRunning(c.withLogger))
 	}
 	if c.SkipIfStillRunning {
-		wrappers = append(wrappers, cron.SkipIfStillRunning(c.WithLogger))
+		wrappers = append(wrappers, cron.SkipIfStillRunning(c.withLogger))
 	}
 	return wrappers
 }
@@ -80,7 +81,7 @@ func NewScheduler(config *SchedulerConfig) Scheduler {
 
 	// use DefaultLogger is no logger is provided
 	var logger cron.Logger
-	if config.WithLogger == nil {
+	if config.withLogger == nil {
 		logger = DefaultLogger
 	}
 
