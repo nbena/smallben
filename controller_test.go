@@ -3,8 +3,10 @@ package smallben
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"reflect"
@@ -512,8 +514,10 @@ func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
 	}
 	tests := make([]*SmallBenTestSuite, len(repositories))
 
+	config := Config{Logger: zapr.NewLogger(zap.NewExample()), SchedulerConfig: SchedulerConfig{WithSeconds: true}}
+
 	for i, repository := range repositories {
-		tests[i] = &SmallBenTestSuite{smallBen: New(repository, &SchedulerConfig{WithSeconds: true})}
+		tests[i] = &SmallBenTestSuite{smallBen: New(repository, &config)}
 	}
 	return tests
 }

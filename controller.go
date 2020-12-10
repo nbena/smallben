@@ -10,7 +10,7 @@ import (
 // SmallBen object.
 type Config struct {
 	// SchedulerConfig configures the scheduler
-	schedulerConfig SchedulerConfig
+	SchedulerConfig SchedulerConfig
 	// Logger is the logger to use.
 	Logger logr.Logger
 }
@@ -45,12 +45,13 @@ type SmallBen struct {
 // New creates a new instance of SmallBen.
 // It takes in input the repository and the configuration
 // for the scheduler.
-func New(repository Repository, schedulerConfig *SchedulerConfig) *SmallBen {
-	scheduler := NewScheduler(schedulerConfig)
+func New(repository Repository, config *Config) *SmallBen {
+	scheduler := NewScheduler(&config.SchedulerConfig)
 	return &SmallBen{
 		repository: repository,
 		scheduler:  scheduler,
 		metrics:    newMetrics(),
+		logger:     config.Logger,
 	}
 }
 

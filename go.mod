@@ -3,6 +3,7 @@ module smallben
 go 1.14
 
 require (
+	github.com/go-logr/logr v0.2.0
 	github.com/go-logr/zapr v0.3.0
 	github.com/prometheus/client_golang v1.8.0
 	github.com/robfig/cron/v3 v3.0.1
