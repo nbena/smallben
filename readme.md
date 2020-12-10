@@ -1,6 +1,8 @@
 # SmallBen
 
-`SmallBen` is a small and simple **persistent scheduling library**, that basically combines [cron](https://github.com/robfig/cron/v3) and a persistence layer. That means that jobs that are added to the scheduler will persist across runs. As of now, the only supported persistence layer is [gorm](https://gorm.io/).
+`SmallBen` is a small and simple **persistent scheduling library**, that basically
+combines [cron](https://github.com/robfig/cron/v3) and a persistence layer. That means that jobs that are added to the
+scheduler will persist across runs. As of now, the only supported persistence layer is [gorm](https://gorm.io/).
 
 Features:
 
@@ -10,13 +12,19 @@ Features:
 
 This library can be thought, somehow, as a (much) simpler version of Java [quartz](http://www.quartz-scheduler.org/).
 
+## Status
+
+Almost ready, but **not tested in production**.
+
 ## Jobs
 
-A `Job` is the very central `struct` of this library. A `Job` contains, among the others, the following fields, which must be specified by the user.
+A `Job` is the very central `struct` of this library. A `Job` contains, among the others, the following fields, which
+must be specified by the user.
 
 - `ID`: unique identifier of each job
 - `GroupID`: unique identifier useful to group jobs together
-- `SuperGroupID`: unique identifier useful to group groups of jobs together. For instance, it can be used to model different users. The semantic is left to the user.
+- `SuperGroupID`: unique identifier useful to group groups of jobs together. For instance, it can be used to model
+  different users. The semantic is left to the user.
 
 The concrete execution logic of a `Job` is wrapped in the `CronJob` interface, which is defined as follows.
 
