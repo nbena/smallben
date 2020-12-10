@@ -1,4 +1,4 @@
-module smallben
+module github.com/nbena/smallben
 
 go 1.14
 
