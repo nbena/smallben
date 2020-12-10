@@ -75,7 +75,7 @@ func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 	}
 
 	// let's also retrieve it from the database
-	jobs, err := s.smallBen.repository.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobList(s.jobs)})
+	jobs, err := s.smallBen.repository.ListJobs(&ListJobsOptions{JobIDs: getIdsFromJobList(s.jobs)})
 	if err != nil {
 		t.Errorf("Fail to get jobs from the db: %s", err.Error())
 	}
@@ -84,7 +84,7 @@ func (s *SmallBenTestSuite) TestAddDelete(t *testing.T) {
 	}
 
 	// and directly using the method from the controller
-	jobsFromController, err := s.smallBen.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobList(s.jobs)})
+	jobsFromController, err := s.smallBen.ListJobs(&ListJobsOptions{JobIDs: getIdsFromJobList(s.jobs)})
 	if err != nil {
 		t.Errorf("Fail to get jobs from the controller: %s\n", err.Error())
 	}
@@ -485,10 +485,10 @@ func (s *SmallBenTestSuite) teardown(okNotFound bool, t *testing.T) {
 	err := s.smallBen.DeleteJobs(
 		&DeleteOptions{
 			PauseResumeOptions: PauseResumeOptions{
-				JobIDs: GetIdsFromJobList(s.jobs),
+				JobIDs: getIdsFromJobList(s.jobs),
 			},
 		})
-	// GetIdsFromJobList(s.jobs))
+	// getIdsFromJobList(s.jobs))
 	if err != nil {
 		if !(okNotFound && errors.Is(err, gorm.ErrRecordNotFound)) {
 			t.Errorf("Fail to delete: %s", err.Error())

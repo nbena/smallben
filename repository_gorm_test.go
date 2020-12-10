@@ -74,7 +74,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 
 	// retrieve them using GetRawByIds
-	rawJobs, err := r.repository.ListJobs(&ListJobsOptions{JobIDs: GetIdsFromJobsWithScheduleList(r.jobsToAdd)})
+	rawJobs, err := r.repository.ListJobs(&ListJobsOptions{JobIDs: getIdsFromJobsWithScheduleList(r.jobsToAdd)})
 	if err != nil {
 		t.Errorf("Cannot get raw jobs from id: %s\n", err.Error())
 	}
@@ -82,7 +82,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 		t.Errorf("The number of retrieved test is wrong. Got %d, expected: %d\n", len(rawJobs), len(r.jobsToAdd))
 	}
 	// and also using GetJobsByIds
-	jobsWithSchedule, err := r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobsWithSchedule, err := r.repository.GetJobsByIds(getIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
 		t.Errorf("Cannot get jobs from id: %s\n", err.Error())
 	}
@@ -91,8 +91,8 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 	}
 
 	// build the ids making sure they match
-	gotIds := GetIdsFromJobRawList(rawJobs)
-	expectedIds := GetIdsFromJobsWithScheduleList(r.jobsToAdd)
+	gotIds := getIdsFromJobRawList(rawJobs)
+	expectedIds := getIdsFromJobsWithScheduleList(r.jobsToAdd)
 	if !reflect.DeepEqual(gotIds, expectedIds) {
 		t.Errorf("The retrieved jobs id is wrong. Got\n%+v\nExpected\n%+v\n", gotIds, expectedIds)
 	}
@@ -106,7 +106,7 @@ func (r *RepositoryTestSuite) TestAddNoError(t *testing.T) {
 		t.Errorf("The number of retrieved jobs to execute is wrong. Got %d, expected: %d", len(jobs), len(r.jobsToAdd))
 	}
 
-	gotIds = GetIdsFromJobsWithScheduleList(jobs)
+	gotIds = getIdsFromJobsWithScheduleList(jobs)
 	if !reflect.DeepEqual(gotIds, expectedIds) {
 		t.Errorf("The expected ids are wrong. Got\n%+v\nExpected\n%+v\n", gotIds, expectedIds)
 	}
@@ -232,7 +232,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 
 	// and retrieve
-	jobs, err := r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobs, err := r.repository.GetJobsByIds(getIdsFromJobsWithScheduleList(r.jobsToAdd))
 	counter = 0
 	for i, job := range jobs {
 		if job.rawJob.CronID != counter+10 {
@@ -256,7 +256,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 	}
 
 	// retrieve and check
-	jobs, err = r.repository.GetJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	jobs, err = r.repository.GetJobsByIds(getIdsFromJobsWithScheduleList(r.jobsToAdd))
 	for _, job := range jobs {
 		if job.rawJob.CronID != newCronID {
 			t.Errorf("Cron id not set. Got: %d Expected: %d\n", job.rawJob.CronID, newCronID)
@@ -643,7 +643,7 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 }
 
 func (r *RepositoryTestSuite) teardown(okNotFound bool, t *testing.T) {
-	err := r.repository.DeleteJobsByIds(GetIdsFromJobsWithScheduleList(r.jobsToAdd))
+	err := r.repository.DeleteJobsByIds(getIdsFromJobsWithScheduleList(r.jobsToAdd))
 	if err != nil {
 		if !(okNotFound && errors.Is(err, r.repository.ErrorTypeIfMismatchCount())) {
 			t.Errorf("Cannot delete jobs on teardown: %s\n", err.Error())

@@ -76,7 +76,7 @@ func (r *RepositoryGorm) PauseJobs(jobs []RawJob) error {
 // It returns an error `gorm.ErrRecordNotFound` in case
 // the number of updated rows is different then the length of jobsToAdd.
 func (r *RepositoryGorm) ResumeJobs(jobs []JobWithSchedule) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
+	result := r.db.Table("jobs").Where("id in ?", getIdsFromJobsWithScheduleList(jobs)).Updates(map[string]interface{}{"paused": false})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -219,7 +219,7 @@ func (r *RepositoryGorm) ListJobs(options ToListOptions) ([]RawJob, error) {
 }
 
 func (r *RepositoryGorm) updatePausedField(jobs []RawJob, paused bool) error {
-	result := r.db.Table("jobs").Where("id in ?", GetIdsFromJobRawList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
+	result := r.db.Table("jobs").Where("id in ?", getIdsFromJobRawList(jobs)).Updates(map[string]interface{}{"paused": paused, "cron_id": 0})
 	if result.Error != nil {
 		return result.Error
 	}

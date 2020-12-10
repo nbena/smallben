@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// Scheduler is the struct wrapping cron.
-type Scheduler struct {
+// scheduler is the struct wrapping cron.
+type scheduler struct {
 	cron   *cron.Cron
 	logger cron.Logger
 }
@@ -72,10 +72,10 @@ func (c SchedulerConfig) toJobWrappers() []cron.JobWrapper {
 	return wrappers
 }
 
-// Returns a new Scheduler.
+// Returns a new scheduler.
 // It takes in input the options to configure the
 // inner scheduler.
-func NewScheduler(config *SchedulerConfig) Scheduler {
+func newScheduler(config *SchedulerConfig) scheduler {
 	// build the options from the configuration.
 	options := config.toOptions()
 
@@ -86,7 +86,7 @@ func NewScheduler(config *SchedulerConfig) Scheduler {
 	}
 
 	// create the scheduler struct...
-	scheduler := Scheduler{
+	scheduler := scheduler{
 		// by passing it the options.
 		cron:   cron.New(options...),
 		logger: logger,
@@ -97,7 +97,7 @@ func NewScheduler(config *SchedulerConfig) Scheduler {
 // AddJobs adds `jobs` to the scheduler.
 // This function never fails and updates
 // the input array with the `CronID`.
-func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
+func (s *scheduler) AddJobs(jobs []JobWithSchedule) {
 
 	for i := range jobs {
 		runFunc := jobs[i].run
@@ -119,7 +119,7 @@ func (s *Scheduler) AddJobs(jobs []JobWithSchedule) {
 
 // DeleteJobsWithSchedule remove `jobs` from the scheduler.
 // This function never fails.
-func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
+func (s *scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 	for _, job := range jobs {
 
 		s.logger.Info("Deleted job",
@@ -137,7 +137,7 @@ func (s *Scheduler) DeleteJobsWithSchedule(jobs []JobWithSchedule) {
 // in the scheduler, then this is no-op.
 // It, basically, inherits the behavior
 // of the inner scheduler.
-func (s *Scheduler) DeleteJobs(jobs []RawJob) {
+func (s *scheduler) DeleteJobs(jobs []RawJob) {
 	for _, job := range jobs {
 
 		s.logger.Info("Deleted job",

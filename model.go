@@ -248,8 +248,8 @@ func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	return j.rawJob, nil
 }
 
-// GetIdsFromJobRawList basically does jobs.map(rawJob -> rawJob.id)
-func GetIdsFromJobRawList(jobs []RawJob) []int64 {
+// getIdsFromJobRawList basically does jobs.map(rawJob -> rawJob.id)
+func getIdsFromJobRawList(jobs []RawJob) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, test := range jobs {
 		ids[i] = test.ID
@@ -257,8 +257,8 @@ func GetIdsFromJobRawList(jobs []RawJob) []int64 {
 	return ids
 }
 
-// GetIdsFromJobsWithScheduleList basically does jobs.map(rawJob -> rawJob.id)
-func GetIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
+// getIdsFromJobsWithScheduleList basically does jobs.map(rawJob -> rawJob.id)
+func getIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, job := range jobs {
 		ids[i] = job.rawJob.ID
@@ -266,8 +266,8 @@ func GetIdsFromJobsWithScheduleList(jobs []JobWithSchedule) []int64 {
 	return ids
 }
 
-// GetIdsFromJobs basically does jobs.map(rawJob -> rawJob.id)
-func GetIdsFromJobList(jobs []Job) []int64 {
+// getIdsFromJobList basically does jobs.map(rawJob -> rawJob.id)
+func getIdsFromJobList(jobs []Job) []int64 {
 	ids := make([]int64, len(jobs))
 	for i, job := range jobs {
 		ids[i] = job.ID
@@ -288,8 +288,8 @@ func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
 	return cron.ParseStandard(u.CronExpression)
 }
 
-// GetIdsFromUpdateScheduleList basically does schedules.map(rawJob -> rawJob.id)
-func GetIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int64 {
+// getIdsFromUpdateScheduleList basically does schedules.map(rawJob -> rawJob.id)
+func getIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int64 {
 	ids := make([]int64, len(schedules))
 	for i, test := range schedules {
 		ids[i] = test.JobID

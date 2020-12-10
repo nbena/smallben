@@ -8,7 +8,7 @@ import (
 )
 
 type SchedulerTestSuite struct {
-	scheduler Scheduler
+	scheduler scheduler
 	jobs      []JobWithSchedule
 }
 
@@ -82,7 +82,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 }
 
 func (s *SchedulerTestSuite) setup() {
-	s.scheduler = NewScheduler(&SchedulerConfig{WithSeconds: true})
+	s.scheduler = newScheduler(&SchedulerConfig{WithSeconds: true})
 	s.scheduler.cron.Start()
 
 	s.jobs = []JobWithSchedule{
@@ -184,7 +184,7 @@ func TestSchedulerWithOptions(t *testing.T) {
 	}
 
 	for _, option := range options {
-		NewScheduler(&option)
+		newScheduler(&option)
 	}
 }
 
