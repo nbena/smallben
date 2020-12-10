@@ -1,15 +1,36 @@
-create table if not exists jobs (
+create table if not exists jobs
+(
     -- the test rule id
-    id bigint primary key,
+    id
+    bigint
+    primary
+    key,
     -- the id of the group owning this job
-    group_id bigint not null,
+    group_id
+    bigint
+    not
+    null
+    unique,
     -- the id of the supergroup owning this group of job
-    super_group_id integer not null,
+    super_group_id
+    integer
+    not
+    null
+    unique,
     -- set to true if you want to pause this test
-    paused boolean not null default false,
+    paused
+    boolean
+    not
+    null
+    default
+    false,
     -- cron expression deciding the scheduling of this
     -- job
-    cron_expression varchar(256) not null,
+    cron_expression
+    varchar
+(
+    256
+) not null,
     -- id of the cron entry
     cron_id integer not null default 0,
     -- serialized job using base64(gob(job))
@@ -24,7 +45,6 @@ create table if not exists jobs (
     created_at timestamp with time zone not null default current_timestamp,
     -- when the item has been updated last time
     updated_at timestamp  with time zone not null default current_timestamp,
-    unique(id, group_id, super_group_id)
 );
 
 -- index on the paused field

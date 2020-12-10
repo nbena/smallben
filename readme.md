@@ -18,8 +18,6 @@ A `Job` is the very central `struct` of this library. A `Job` contains, among th
 - `GroupID`: unique identifier useful to group jobs together
 - `SuperGroupID`: unique identifier useful to group groups of jobs together. For instance, it can be used to model different users. The semantic is left to the user.
 
-Depending on the underlying storage, the `ID` might be unique together in each `GroupID`, and the same might applies for `GroupID` within `SuperGroupID`. In fact, this is how the current storage works.
-
 The concrete execution logic of a `Job` is wrapped in the `CronJob` interface, which is defined as follows.
 
 ```go
@@ -42,7 +40,8 @@ type CronJobInput struct {
 }
 ```
 
-In practice, each (implementation of) `CronJob` receives in input a buch of data containing some information about the job itself. In particular, `OtherInputs` is a map that can contain arbitrary data needed for the job.
+In practice, each (implementation of) `CronJob` receives in input a bunch of data containing some information about the
+job itself. In particular, `OtherInputs` is a map that can contain arbitrary data needed for the job.
 
 Since they are persisted using `gob` serialization, it is important to:
 
@@ -89,7 +88,8 @@ func(f *FooJob) Run(input smallben.CronJobInput) {
 }
 ```
 
-Now, this implementation must be registered, to make `gob` encoding work. A good place to do it is in the `init()` function.
+Now, this implementation must be registered, to make `gob` encoding works. A good place to do it is in the `init()`
+function.
 
 ```go
 import (
@@ -101,7 +101,8 @@ func init() {
 }
 ```
 
-The third thing to do is to actually **create a `Job`**, which we later submit to `SmallBen`. Other than `ID`, `GroupID` and `SuperGroupID`, the following field must be specified.
+The third thing to do is to actually **create a `Job`**, which we later submit to `SmallBen`. Other than `ID`, `GroupID`
+and `SuperGroupID`, the following fields must be specified.
 
 - `CronExpression` to specify the execution interval, following the format used by [cron](https://github.com/robfig/cron/v3)
 - `Job` to specify the actual implementation of `CronJob` to execute
@@ -110,22 +111,46 @@ The third thing to do is to actually **create a `Job`**, which we later submit t
 ```go
 // Create a Job struct. No builder-style API.
 job := smallben.Job{
-    ID: 1,
-    GroupID: 1,
-    SuperGroupID: 1,
-    // executed every 5 seconds
-    CronExpression: "@every 5s",
-    Job: &FooJob{},
-    JobInput: make(map[string]interface{}),
+ID: 1,
+GroupID: 1,
+SuperGroupID: 1,
+// executed every 5 seconds
+CronExpression: "@every 5s",
+Job: &FooJob{},
+JobInput: make(map[string]interface{}),
 }
 ```
 
-The fourth thing to do is to actually **create the scheduler**. It receives just one parameter, the previously created storage.
+The fourth thing to do is to actually **create the scheduler**, by passing in the storage interface and a
+configuration`struct`. The latter allows to set some options of `cron`, and configures the logger, that must
+implement [logr](https://github.com/go-logr/logr).
+
+For instance, the example below uses [zapr](https://github.com/go-logr/zapr).
 
 ```go
+import (
+"github.com/go-logr/zapr"
+"github.com/robfig/cron/v3"
+"go.uber.org/zap"
+)
+
+// create the Zap logger
+zapLogger, _ := zap.NewProduction()
+// that now is being wrapped into Zapr, providing
+// the compatibility layer with logr.
+logger := zapr.NewLogger(zapLogger)
+
+config := Config{
+// use default options for the scheduler
+SchedulerConfig: &smallben.SchedulerConfig{},
+Logger: logger,
+}
+
+// create the repository...
+
 // create the scheduler passing
 // in the storage.
-scheduler := smallben.New(repo)
+scheduler := smallben.New(repo, &config)
 ```
 
 Next, the **scheduler must be started**. Starting the scheduler will make it fetching all the `Job` within the storage that must be executed.
