@@ -51,7 +51,7 @@ type Repository interface {
 	// of required jobs, i.e., `len(jobs)`.
 	SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error
 	// ListJobs list all the jobs present in the job storage backend,
-	// according to `toListOptions`.
+	// according to `options`. If options is `nil`, no filtering is applied.
 	ListJobs(options ToListOptions) ([]RawJob, error)
 	// ErrorTypeIfMismatchCount specifies the error type
 	// to return in case there is a mismatch count

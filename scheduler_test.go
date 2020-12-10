@@ -82,7 +82,7 @@ func (s *SchedulerTestSuite) TestAdd(t *testing.T) {
 }
 
 func (s *SchedulerTestSuite) setup() {
-	s.scheduler = NewScheduler()
+	s.scheduler = NewScheduler(&SchedulerConfig{WithSeconds: true})
 	s.scheduler.cron.Start()
 
 	s.jobs = []JobWithSchedule{
@@ -164,6 +164,28 @@ func (s *SchedulerTestSuite) setup() {
 func (s *SchedulerTestSuite) teardown() {
 	s.scheduler.DeleteJobsWithSchedule(s.jobs)
 	s.scheduler.cron.Stop()
+}
+
+// Some basic options mangling to increase coverage
+func TestSchedulerWithOptions(t *testing.T) {
+	location, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Errorf("Fail to setup Location: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	options := []SchedulerConfig{
+		{
+			DelayIfStillRunning: true,
+			SkipIfStillRunning:  true,
+			WithLocation:        location,
+			withLogger:          DefaultLogger,
+		},
+	}
+
+	for _, option := range options {
+		NewScheduler(&option)
+	}
 }
 
 func TestScheduler(t *testing.T) {

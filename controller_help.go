@@ -8,12 +8,16 @@ var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of Pa
 
 // fill retrieves all the RawJob to execute from the database
 // and then schedules them for execution. In case of errors
-// it is guaranteed that *all* the jobsToAdd retrieved from the
+// it is guaranteed that *all* the jobs retrieved from the
 // database will be cancelled.
 // This method is *idempotent*, call it every time you want,
 // and the scheduler won't be filled in twice.
 func (s *SmallBen) fill() error {
 	if !s.filled {
+		// filling in the metrics
+		if err := s.fillMetrics(); err != nil {
+			return err
+		}
 		// get all the tests
 		jobs, err := s.repository.GetAllJobsToExecute()
 		if err != nil {

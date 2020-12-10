@@ -3,7 +3,10 @@ package smallben
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/go-logr/zapr"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"reflect"
@@ -470,46 +473,11 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 
 }
 
-func (s *SmallBenTestSuite) setup() {
-	//jobs := []Job{
-	//	{
-	//		ID:             1,
-	//		GroupID:        1,
-	//		SuperGroupID:   1,
-	//		CronExpression: "@every 70s",
-	//		Job:            &SmallBenCronJob{},
-	//		JobInput: map[string]interface{}{
-	//			"test_id": 1,
-	//		},
-	//	}, {
-	//		ID:             2,
-	//		GroupID:        1,
-	//		SuperGroupID:   1,
-	//		CronExpression: "@every 62s",
-	//		Job:            &SmallBenCronJob{},
-	//		JobInput: map[string]interface{}{
-	//			"test_id": 2,
-	//		},
-	//	}, {
-	//		ID:             3,
-	//		GroupID:        2,
-	//		SuperGroupID:   1,
-	//		CronExpression: "@every 61s",
-	//		Job:            &SmallBenCronJob{},
-	//		JobInput: map[string]interface{}{
-	//			"test_id": 3,
-	//		},
-	//	}, {
-	//		ID:             4,
-	//		GroupID:        2,
-	//		SuperGroupID:   2,
-	//		CronExpression: "@every 60s",
-	//		Job:            &SmallBenCronJob{},
-	//		JobInput: map[string]interface{}{
-	//			"test_id": 4,
-	//		},
-	//	},
-	//}
+func (s *SmallBenTestSuite) setup(t *testing.T) {
+	if err := s.smallBen.RegisterMetrics(prometheus.NewRegistry()); err != nil {
+		t.Errorf("Fail to register metrics: %s\n", err.Error())
+		t.FailNow()
+	}
 	s.jobs = JobsToUse
 }
 
@@ -545,8 +513,11 @@ func buildSmallBenTestSuite(t *testing.T) []*SmallBenTestSuite {
 		newGormRepository(&RepositoryGormConfig{Dialector: postgres.Open(pgConn)}, t),
 	}
 	tests := make([]*SmallBenTestSuite, len(repositories))
+
+	config := Config{Logger: zapr.NewLogger(zap.NewExample()), SchedulerConfig: SchedulerConfig{WithSeconds: true}}
+
 	for i, repository := range repositories {
-		tests[i] = &SmallBenTestSuite{smallBen: New(repository)}
+		tests[i] = &SmallBenTestSuite{smallBen: New(repository, &config)}
 	}
 	return tests
 }
@@ -555,7 +526,7 @@ func TestSmallBenAdd(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup()
+		test.setup(t)
 		test.TestAddDelete(t)
 		test.teardown(false, t)
 	}
@@ -565,7 +536,7 @@ func TestSmallBenPauseResume(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup()
+		test.setup(t)
 		test.TestPauseResume(t)
 		test.teardown(true, t)
 	}
@@ -575,7 +546,7 @@ func TestSmallBenChangeSchedule(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup()
+		test.setup(t)
 		test.TestChangeSchedule(t)
 		test.teardown(true, t)
 	}
@@ -585,7 +556,7 @@ func TestSmallBenOther(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup()
+		test.setup(t)
 		test.TestOther(t)
 		test.teardown(true, t)
 	}
@@ -595,7 +566,7 @@ func TestSmallBenError(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
-		test.setup()
+		test.setup(t)
 		test.TestErrors(t)
 		test.teardown(true, t)
 	}
