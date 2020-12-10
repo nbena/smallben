@@ -166,6 +166,28 @@ func (s *SchedulerTestSuite) teardown() {
 	s.scheduler.cron.Stop()
 }
 
+// Some basic options mangling to increase coverage
+func TestSchedulerWithOptions(t *testing.T) {
+	location, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Errorf("Fail to setup Location: %s\n", err.Error())
+		t.FailNow()
+	}
+
+	options := []SchedulerConfig{
+		{
+			DelayIfStillRunning: true,
+			SkipIfStillRunning:  true,
+			WithLocation:        location,
+			withLogger:          DefaultLogger,
+		},
+	}
+
+	for _, option := range options {
+		NewScheduler(&option)
+	}
+}
+
 func TestScheduler(t *testing.T) {
 	test := new(SchedulerTestSuite)
 	test.setup()
