@@ -9,14 +9,12 @@ create table if not exists jobs
     group_id
     bigint
     not
-    null
-    unique,
+    null,
     -- the id of the supergroup owning this group of job
     super_group_id
     integer
     not
-    null
-    unique,
+    null,
     -- set to true if you want to pause this test
     paused
     boolean

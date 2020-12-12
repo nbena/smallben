@@ -388,3 +388,11 @@ func (s *SmallBen) ListJobs(options *ListJobsOptions) ([]Job, error) {
 	}
 	return jobs, nil
 }
+
+// ErrorTypeIfMismatchCount returns the error returned
+// during operations where the number of involved jobs
+// is different than the number of expected jobs that
+// should have been involved.
+func (s *SmallBen) ErrorTypeIfMismatchCount() error {
+	return s.repository.ErrorTypeIfMismatchCount()
+}
