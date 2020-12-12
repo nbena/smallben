@@ -41,10 +41,16 @@ The `Run` method takes input a `struct` of type `CronJobInput`, which is defined
 ```go
 // CronJobInput is the input passed to the Run function.
 type CronJobInput struct {
-	JobID        int64
-	GroupID      int64
-	SuperGroupID int64
-	OtherInputs  map[string]interface{}
+// JobID is the ID of the current job.
+JobID        int64
+// GroupID is the GroupID of the current job.
+GroupID      int64
+// SuperGroupID is the SuperGroupID of the current job.
+SuperGroupID int64
+// CronExpression is the interval of execution, as specified on job creation.
+CronExpression string
+// OtherInputs contains the other inputs of the job.
+OtherInputs  map[string]interface{}
 }
 ```
 

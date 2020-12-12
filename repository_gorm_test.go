@@ -540,9 +540,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        1,
-				GroupID:      1,
-				SuperGroupID: 1,
+				JobID:          1,
+				GroupID:        1,
+				SuperGroupID:   1,
+				CronExpression: "@every 60s",
 				OtherInputs: map[string]interface{}{
 					"hello": "is there anybody in there?",
 				},
@@ -558,9 +559,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        2,
-				GroupID:      1,
-				SuperGroupID: 1,
+				JobID:          2,
+				GroupID:        1,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
@@ -576,9 +578,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobModifyMap{},
 			runInput: CronJobInput{
-				JobID:        3,
-				GroupID:      1,
-				SuperGroupID: 1,
+				JobID:          3,
+				GroupID:        1,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
@@ -594,9 +597,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        4,
-				GroupID:      2,
-				SuperGroupID: 1,
+				JobID:          4,
+				GroupID:        2,
+				SuperGroupID:   1,
+				CronExpression: "@every 120s",
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
@@ -612,9 +616,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        5,
-				GroupID:      1,
-				SuperGroupID: 2,
+				JobID:          5,
+				GroupID:        1,
+				SuperGroupID:   2,
+				CronExpression: "@every 120s",
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},
@@ -630,9 +635,10 @@ func (r *RepositoryTestSuite) setup(t *testing.T) {
 			},
 			run: &TestCronJobNoop{},
 			runInput: CronJobInput{
-				JobID:        6,
-				GroupID:      3,
-				SuperGroupID: 3,
+				JobID:          6,
+				GroupID:        3,
+				SuperGroupID:   3,
+				CronExpression: "@every 120s",
 				OtherInputs: map[string]interface{}{
 					"when I was a child": "I had fever",
 				},

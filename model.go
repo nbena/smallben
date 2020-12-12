@@ -61,10 +61,11 @@ func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
 		schedule: schedule,
 		run:      j.Job,
 		runInput: CronJobInput{
-			JobID:        j.ID,
-			GroupID:      j.GroupID,
-			SuperGroupID: j.SuperGroupID,
-			OtherInputs:  j.JobInput,
+			JobID:          j.ID,
+			GroupID:        j.GroupID,
+			SuperGroupID:   j.SuperGroupID,
+			OtherInputs:    j.JobInput,
+			CronExpression: j.CronExpression,
 		},
 	}
 	return result, nil
@@ -151,10 +152,11 @@ func (j *RawJob) decodeSerializedFields() (CronJob, CronJobInput, error) {
 	// and build the overall object containing all the
 	// inputs will be passed to the Job
 	runJobInput := CronJobInput{
-		JobID:        j.ID,
-		GroupID:      j.GroupID,
-		SuperGroupID: j.SuperGroupID,
-		OtherInputs:  jobInputMap,
+		JobID:          j.ID,
+		GroupID:        j.GroupID,
+		SuperGroupID:   j.SuperGroupID,
+		CronExpression: j.CronExpression,
+		OtherInputs:    jobInputMap,
 	}
 	return runJob, runJobInput, nil
 }
@@ -299,10 +301,16 @@ func getIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int64 {
 
 // CronJobInput is the input passed to the Run function.
 type CronJobInput struct {
-	JobID        int64
-	GroupID      int64
+	// JobID is the ID of the current job.
+	JobID int64
+	// GroupID is the GroupID of the current job.
+	GroupID int64
+	// SuperGroupID is the SuperGroupID of the current job.
 	SuperGroupID int64
-	OtherInputs  map[string]interface{}
+	// CronExpression is the interval of execution, as specified on job creation.
+	CronExpression string
+	// OtherInputs contains the other inputs of the job.
+	OtherInputs map[string]interface{}
 }
 
 // CronJob is the interface jobs have to implement.

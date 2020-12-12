@@ -19,8 +19,18 @@ type SmallBenTestSuite struct {
 	jobs     []Job
 }
 
+// TestMapValue is used during test execution.
+// number contains input.otherInputs["test_id"]
+// cronExpression contains input.CronExpression
+type TestMapValue struct {
+	number         int
+	cronExpression string
+}
+
+// TestMap is used during the test execution.
+// It is updated by the jobs
 type TestMap struct {
-	data map[int64]int
+	data map[int64]TestMapValue
 	lock sync.Mutex
 }
 
@@ -33,7 +43,10 @@ type SmallBenCronJob struct{}
 func (s *SmallBenCronJob) Run(input CronJobInput) {
 	testMap.lock.Lock()
 	defer testMap.lock.Unlock()
-	testMap.data[input.JobID] = input.OtherInputs["test_id"].(int)
+	testMap.data[input.JobID] = TestMapValue{
+		number:         input.OtherInputs["test_id"].(int),
+		cronExpression: input.CronExpression,
+	}
 }
 
 func init() {

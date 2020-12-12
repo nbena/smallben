@@ -102,9 +102,10 @@ func TestJobToRaw(t *testing.T) {
 	now := time.Now()
 
 	inputJob1 := CronJobInput{
-		JobID:        1,
-		GroupID:      1,
-		SuperGroupID: 1,
+		JobID:          1,
+		GroupID:        1,
+		SuperGroupID:   1,
+		CronExpression: "@every 20s",
 		OtherInputs: map[string]interface{}{
 			"life": "it seems to fade away",
 		},
@@ -162,9 +163,10 @@ func TestJobRawToJob(t *testing.T) {
 	now := time.Now()
 
 	inputJob1 := CronJobInput{
-		JobID:        1,
-		GroupID:      1,
-		SuperGroupID: 1,
+		JobID:          1,
+		GroupID:        1,
+		SuperGroupID:   1,
+		CronExpression: "@every 1s",
 		OtherInputs: map[string]interface{}{
 			"life": "it seems to fade away",
 		},
@@ -260,9 +262,10 @@ func TestJobFromRaw(t *testing.T) {
 	now := time.Now()
 
 	inputJob1 := CronJobInput{
-		JobID:        1,
-		GroupID:      1,
-		SuperGroupID: 1,
+		JobID:          1,
+		GroupID:        1,
+		SuperGroupID:   1,
+		CronExpression: "@every 1s",
 		OtherInputs: map[string]interface{}{
 			"life": "it seems to fade away",
 		},
