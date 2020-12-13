@@ -168,6 +168,13 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 		return err
 	}
 
+	// if no jobs are returned then
+	// throws an error and exit
+	if len(jobs) == 0 {
+		s.logger.Info("Deleting jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", "No jobs found")
+		return s.repository.ErrorTypeIfMismatchCount()
+	}
+
 	s.logger.Info("Deleting jobs", "Progress", "InProgress", "IDs", getIdsFromJobRawList(jobs))
 
 	// now delete them
