@@ -191,6 +191,8 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 // PauseJobs pauses the jobs according to the filter defined in options.
 // It returns an error of type ErrPauseResumeOptionsBad if the options
 // are malformed.
+// If no jobs matching options are found, an error of type ErrorTypeIfMismatchCount
+// is returned.
 func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	// check if the struct is correct
 	if !options.Valid() {
@@ -205,8 +207,15 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 	// grab the corresponding jobs
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
-		s.logger.Error(err, "Pausing jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", getIdsFromJobRawList(jobs))
+		s.logger.Error(err, "Pausing jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", getIdsFromJobRawList(jobs))
 		return err
+	}
+
+	// if no jobs are returned then
+	// throws an error and exit
+	if len(jobs) == 0 {
+		s.logger.Info("Pausing jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", "No jobs found")
+		return s.repository.ErrorTypeIfMismatchCount()
 	}
 
 	s.logger.Info("Pausing jobs", "Progress", "InProgress", "Details", "PausingInRepository", "IDs", getIdsFromJobRawList(jobs))
@@ -232,6 +241,8 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 // Eventual jobsToAdd that were not paused, will keep run smoothly.
 // In case of errors during the last steps of the execution,
 // the jobsToAdd are removed from the scheduler.
+// If no jobs matching options are found, an error of type ErrorTypeIfMismatchCount
+// is returned.
 func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	// check if the struct is correct
 	if !options.Valid() {
@@ -248,6 +259,13 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	if err != nil {
 		s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", getIdsFromJobRawList(jobs))
 		return err
+	}
+
+	// if no jobs are returned then
+	// throws an error and exit
+	if len(jobs) == 0 {
+		s.logger.Info("Resuming jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", "No jobs found")
+		return s.repository.ErrorTypeIfMismatchCount()
 	}
 
 	// now, we have to making sure those jobsToAdd are not already in the scheduler
