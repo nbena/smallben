@@ -37,6 +37,17 @@ type Job struct {
 	JobInput map[string]interface{}
 }
 
+// CreatedAt returns the time when this Job has been added to the scheduler.
+func (j *Job) CreatedAt() time.Time {
+	return j.createdAt
+}
+
+// UpdatedAt returns the last time this Job has been updated, i.e.,
+// paused, resumed, schedule changed.
+func (j *Job) UpdatedAt() time.Time {
+	return j.updatedAt
+}
+
 // toJobWithSchedule converts Job to a JobWithSchedule object.
 // It returns an error in case the parsing of the cron expression fails.
 func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
