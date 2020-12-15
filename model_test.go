@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
@@ -39,7 +40,7 @@ func (j *jobToRawTest) TestToRaw(t *testing.T) {
 func (j *jobFromRawTest) TestFromRaw(t *testing.T) {
 	withScheduleBuilt, err := j.raw.ToJobWithSchedule()
 	if err != nil {
-		t.Errorf("Cannot build JobWithSchedule from RawJob")
+		t.Errorf("Cannot build JobWithSchedule from RawJob: %s\n", err.Error())
 		t.FailNow()
 	}
 	// reflect.DeepEqual does not work very well
@@ -91,11 +92,22 @@ func (j *jobRawToJobTest) TestJobRawToJob(t *testing.T) {
 	}
 }
 
-func interfaceEncode(t *testing.T, encoder *gob.Encoder, job CronJob) {
+// interfaceEncode encodes `job` into `encoder`.
+func interfaceEncode(encoder *gob.Encoder, job CronJob, t *testing.T) {
 	if err := encoder.Encode(&job); err != nil {
-		t.Errorf("Fail to encode: %s\n", err.Error())
+		t.Errorf("Fail to gob encode: %s\n", err.Error())
 		t.FailNow()
 	}
+}
+
+// inputEncode encodes `data` in a json string.
+func inputEncode(data map[string]interface{}, t *testing.T) string {
+	encodedData, err := json.Marshal(data)
+	if err != nil {
+		t.Errorf("Fail to json encode: %s\n", err.Error())
+		t.FailNow()
+	}
+	return string(encodedData)
 }
 
 func TestJobToRaw(t *testing.T) {
@@ -221,15 +233,16 @@ func TestJobFromRawWithError(t *testing.T) {
 
 	// now, set the first one to a valid job
 	jobSerialized, _ := fakeSerialized(t, map[string]interface{}{})
-
+	// passing in an invalid json-encoded input
 	raw.SerializedJob = jobSerialized
 	_, err = raw.ToJobWithSchedule()
-	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
+	checkErrorMsg(err, "unexpected end of JSON input", t)
 
 	raw.CronExpression = "not a valid cron expression"
 	_, err = raw.ToJobWithSchedule()
 	if err == nil {
 		t.Errorf("An invalid schedule has been accepted")
+		t.FailNow()
 	}
 
 	job := Job{
@@ -238,6 +251,7 @@ func TestJobFromRawWithError(t *testing.T) {
 	_, err = job.toJobWithSchedule()
 	if err == nil {
 		t.Errorf("An invalid schedule has been accepted")
+		t.FailNow()
 	}
 
 	// set a non valid job
@@ -245,6 +259,7 @@ func TestJobFromRawWithError(t *testing.T) {
 	_, err = raw.toJob()
 	if err == nil {
 		t.Errorf("A not valid CronJob has been decoded")
+		t.FailNow()
 	}
 
 	// set a non valid job input
@@ -254,6 +269,7 @@ func TestJobFromRawWithError(t *testing.T) {
 	_, err = raw.toJob()
 	if err == nil {
 		t.Errorf("A not valid CronJob has been decoded")
+		t.FailNow()
 	}
 
 }
@@ -312,23 +328,17 @@ func TestJobFromRaw(t *testing.T) {
 	}
 }
 
-// serialize a input for us
-// job: TestCronJobNoop
-// job input: input
+// fakeSerialized serializes a Job of type TestCronJobNoop
+// and its input returning them as encoded strings.
 func fakeSerialized(t *testing.T, input map[string]interface{}) (string, string) {
 	var bufferJob bytes.Buffer
-	var bufferInput bytes.Buffer
 
 	encoder := gob.NewEncoder(&bufferJob)
 	testCronJob := &TestCronJobNoop{}
 
-	interfaceEncode(t, encoder, testCronJob)
+	interfaceEncode(encoder, testCronJob, t)
 
-	encoder = gob.NewEncoder(&bufferInput)
-	if err := encoder.Encode(input); err != nil {
-		t.Errorf("Cannot encode input: %s\n", err.Error())
-		t.FailNow()
-	}
+	jobInputEncoded := inputEncode(input, t)
 
-	return base64.StdEncoding.EncodeToString(bufferJob.Bytes()), base64.StdEncoding.EncodeToString(bufferInput.Bytes())
+	return base64.StdEncoding.EncodeToString(bufferJob.Bytes()), jobInputEncoded
 }

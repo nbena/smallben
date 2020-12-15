@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"github.com/robfig/cron/v3"
 	"time"
 )
@@ -146,20 +147,12 @@ func (j *RawJob) decodeSerializedFields() (CronJob, CronJobInput, error) {
 		return nil, CronJobInput{}, err
 	}
 
-	// decode from base64 the serialized job input
-	decodedJobInput, err := base64.StdEncoding.DecodeString(j.SerializedJobInput)
-	if err != nil {
+	// decode the input from json
+	var jobInputMap map[string]interface{}
+	if err := json.Unmarshal([]byte(j.SerializedJobInput), &jobInputMap); err != nil {
 		return nil, CronJobInput{}, err
 	}
 
-	// decode the map containing the arguments will be passed
-	// to the job
-	decoder = gob.NewDecoder(bytes.NewBuffer(decodedJobInput))
-	var jobInputMap map[string]interface{}
-	// var runJobInput CronJobInput
-	if err = decoder.Decode(&jobInputMap); err != nil {
-		return nil, CronJobInput{}, err
-	}
 	// and build the overall object containing all the
 	// inputs will be passed to the Job
 	runJobInput := CronJobInput{
@@ -234,11 +227,13 @@ func encodeJob(encoder *gob.Encoder, job CronJob) error {
 }
 
 // BuildJob builds the raw version of the inner job, by encoding
-// it to binary. This is needed since, when converting from a `RawJob` to a `JobWithSchedule`,
+// it. In particular, the encoding is done as follows:
+// - for the serialized job, it is encoded in Gob and then in base64
+// - for the job input, it is encoded in json.
+//This is needed since, when converting from a `RawJob` to a `JobWithSchedule`,
 // the binary serialization of the Job is not kept in memory.
 func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	var bufferJob bytes.Buffer
-	var bufferInput bytes.Buffer
 	encoderJob := gob.NewEncoder(&bufferJob)
 	// encode the CronJob interface keeping the unit of work
 	// to execute. We need to use the encodeJob method
@@ -250,14 +245,11 @@ func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	j.rawJob.SerializedJob = base64.StdEncoding.EncodeToString(bufferJob.Bytes())
 
 	// now, encode the job input
-	// first, we build the decoded
-	encoderInput := gob.NewEncoder(&bufferInput)
-	// and finally, encode it
-	if err := encoderInput.Encode(j.runInput.OtherInputs); err != nil {
+	encodedInput, err := json.Marshal(j.runInput.OtherInputs)
+	if err != nil {
 		return RawJob{}, err
 	}
-	// finally, encode the bytes to base64
-	j.rawJob.SerializedJobInput = base64.StdEncoding.EncodeToString(bufferInput.Bytes())
+	j.rawJob.SerializedJobInput = string(encodedInput)
 	return j.rawJob, nil
 }
 

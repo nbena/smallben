@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -469,14 +470,32 @@ Got: %d Expected: %d\n`, len(jobs), 1)
 	if len(jobs) != len(jobsBySuperGroup)-1 {
 		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = false count mismatch
 Got: %d Expected: %d\n`, len(jobs), len(jobsBySuperGroup)-1)
+		t.FailNow()
 	}
 }
 
+// checkErrorIsOf checks that `err` is of type `expected`. If `err`
+// is nil, fails showing `msg`.
 func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
 	if err == nil {
 		t.Errorf("%s error expected. Should have been not nil.\n", msg)
+		t.FailNow()
 	} else if !errors.Is(err, expected) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
+		t.FailNow()
+	}
+}
+
+// checkErrorMsg checks that `err` contains `msg`, failing otherwise.
+// if `err` is nil it fails.
+func checkErrorMsg(err error, msg string, t *testing.T) {
+	if err == nil {
+		t.Errorf("%s error expected. Should have been not nil.\n", msg)
+		t.FailNow()
+	}
+	if !strings.Contains(err.Error(), msg) {
+		t.Errorf("Error '%s' does not contain '%s'\n", err.Error(), msg)
+		t.FailNow()
 	}
 }
 
