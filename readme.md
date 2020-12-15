@@ -14,7 +14,7 @@ This library can be thought, somehow, as a (much) simpler version of Java [quart
 
 ## Status
 
-Almost ready, but **not tested in production**.
+APIs are almost finalized but should **not considered stable** until a `v1`.
 
 ## Jobs
 
