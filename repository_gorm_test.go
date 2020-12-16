@@ -306,6 +306,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	}
 	if len(jobs) != 1 {
 		t.Errorf("Paused = true count mismatch: Got %d Expected: %d\n", len(jobs), 1)
+		t.FailNow()
 	}
 
 	// now do the same using paused = false
@@ -318,6 +319,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	if len(jobs) != len(r.jobsToAdd)-1 {
 		t.Errorf("Paused = false count mismatch: Got %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd)-1)
+		t.FailNow()
 	}
 
 	// resume the job that have been paused
@@ -344,6 +346,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	if len(jobs) != len(r.jobsToAdd) {
 		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd))
+		t.FailNow()
 	}
 
 	// now, let's pause a job within the group
@@ -365,6 +368,7 @@ func (r *RepositoryTestSuite) TestList(t *testing.T) {
 	if len(jobs) != 1 {
 		t.Errorf(`GroupIDs = all & paused = true count mismatch
 Got: %d Expected: %d\n`, len(jobs), 1)
+		t.FailNow()
 	}
 
 	// now test with pause = false
@@ -378,6 +382,7 @@ Got: %d Expected: %d\n`, len(jobs), 1)
 	if len(jobs) != len(r.jobsToAdd)-1 {
 		t.Errorf(`GroupIDs = all & paused = false count mismatch
 Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
+		t.FailNow()
 	}
 
 	// do the same, also for super groups
@@ -392,6 +397,7 @@ Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
 	if len(jobs) != len(r.jobsToAdd) {
 		t.Errorf("GroupIDs = all count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(r.jobsToAdd))
+		t.FailNow()
 	}
 
 	// now, select just a group
@@ -413,6 +419,7 @@ Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
 	if len(jobs) != len(jobsByGroup) {
 		t.Errorf("GroupIDs = groups[0] count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(jobsByGroup))
+		t.FailNow()
 	}
 
 	// do the same, also for the super-group
@@ -437,6 +444,7 @@ Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
 	if len(jobs) != len(jobsBySuperGroup) {
 		t.Errorf("SuperGroupIDs = superGroups[-2:] count mismatch. Got: %d Expected: %d\n",
 			len(jobs), len(jobsBySuperGroup))
+		t.FailNow()
 	}
 
 	// now, we pause of such jobs
@@ -455,8 +463,17 @@ Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
 		t.FailNow()
 	}
 	if len(jobs) != 1 {
-		t.Errorf(`SuperGroupIDs = superGroups[-2:] & paused = true count mismatch
-Got: %d Expected: %d\n`, len(jobs), 1)
+		t.Errorf("SuperGroupIDs = superGroups[-2:] & paused = true count mismatch. Got: %d Expected: %d\n`",
+			len(jobs), 1)
+		t.FailNow()
+	}
+	// also make sure they have been paused
+	// to get coverage on Paused() method
+	for _, jobPaused := range jobs {
+		if jobPaused.Paused != true {
+			t.Errorf("Job should have been paused but it is not. Job: %v\n", jobPaused)
+			t.FailNow()
+		}
 	}
 
 	// now, we do the same by with paused = false

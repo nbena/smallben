@@ -49,6 +49,12 @@ func (j *Job) UpdatedAt() time.Time {
 	return j.updatedAt
 }
 
+// Paused returns whether this Job is currently paused
+// or not.
+func (j *Job) Paused() bool {
+	return j.paused
+}
+
 // toJobWithSchedule converts Job to a JobWithSchedule object.
 // It returns an error in case the parsing of the cron expression fails.
 func (j *Job) toJobWithSchedule() (JobWithSchedule, error) {
