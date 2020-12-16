@@ -467,14 +467,6 @@ Got: %d Expected: %d\n`, len(jobs), len(r.jobsToAdd)-1)
 			len(jobs), 1)
 		t.FailNow()
 	}
-	// also make sure they have been paused
-	// to get coverage on Paused() method
-	for _, jobPaused := range jobs {
-		if jobPaused.Paused != true {
-			t.Errorf("Job should have been paused but it is not. Job: %v\n", jobPaused)
-			t.FailNow()
-		}
-	}
 
 	// now, we do the same by with paused = false
 	paused = false

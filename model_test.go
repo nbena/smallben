@@ -86,9 +86,27 @@ func (j *jobRawToJobTest) TestJobRawToJob(t *testing.T) {
 	built, err := j.raw.toJob()
 	if err != nil {
 		t.Errorf("Fail to build Job: %s\n", err.Error())
+		t.FailNow()
 	}
 	if !reflect.DeepEqual(built, j.expectedJob) {
 		t.Errorf("The toJob is wrong. Got\n%+v\nExpected\n%+v\n", built, j.expectedJob)
+		t.FailNow()
+	}
+	// also, we test the UpdatedAt() and CreatedAt() just
+	// to increase coverage since there are no other ways
+	// where job.Created() and job.UpdatedAt() are called
+	if built.CreatedAt() != j.expectedJob.CreatedAt() {
+		t.Errorf("CreatedAt mismatch. Got: %s, expected: %s\n",
+			built.CreatedAt().String(), j.expectedJob.CreatedAt().String())
+	}
+	if built.UpdatedAt() != j.expectedJob.UpdatedAt() {
+		t.Errorf("UpdatedAt mismatch. Got: %s, expected: %s\n",
+			built.UpdatedAt().String(), j.expectedJob.UpdatedAt().String())
+	}
+	// do the same for paused
+	if built.Paused() != j.expectedJob.Paused() {
+		t.Errorf("Paused mismatch. Got: %v, expected: %v\n",
+			built.Paused(), j.expectedJob.Paused())
 	}
 }
 
