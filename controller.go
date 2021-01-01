@@ -164,7 +164,7 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	// we need to know the cron id
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
-		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", getIdsFromJobRawList(jobs))
+		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", getIdsFromJobRawList(jobs))
 		return err
 	}
 
@@ -178,12 +178,12 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 	s.logger.Info("Deleting jobs", "Progress", "InProgress", "IDs", getIdsFromJobRawList(jobs))
 
 	// now delete them
-	s.logger.Info("Deleting jobs", "Progress", "InProgress", "Details", "DeletingFromRepository", "IDS", getIdsFromJobRawList(jobs))
+	s.logger.Info("Deleting jobs", "Progress", "InProgress", "Details", "DeletingFromRepository", "IDs", getIdsFromJobRawList(jobs))
 	if err = s.repository.DeleteJobsByIds(getIdsFromJobRawList(jobs)); err != nil {
-		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "DeletingFromRepository", "IDS", getIdsFromJobRawList(jobs))
+		s.logger.Error(err, "Deleting jobs", "Progress", "Error", "Details", "DeletingFromRepository", "IDs", getIdsFromJobRawList(jobs))
 		return err
 	}
-	s.logger.Info("Deleting jobs ", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDS", getIdsFromJobRawList(jobs))
+	s.logger.Info("Deleting jobs ", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDs", getIdsFromJobRawList(jobs))
 
 	// if here, the deletion from the database was fine
 	// so we can safely remove them from the scheduler.
@@ -191,7 +191,7 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 
 	// update the metrics
 	s.metrics.postDelete(beforeJobs, jobs)
-	s.logger.Info("Deleting jobs", "Progress", "Done", "IDS", getIdsFromJobRawList(jobs))
+	s.logger.Info("Deleting jobs", "Progress", "Done", "IDs", getIdsFromJobRawList(jobs))
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	// grab the jobs
 	jobs, err := s.repository.ListJobs(options)
 	if err != nil {
-		s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDS", getIdsFromJobRawList(jobs))
+		s.logger.Error(err, "Resuming jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", getIdsFromJobRawList(jobs))
 		return err
 	}
 
