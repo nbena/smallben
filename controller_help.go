@@ -77,17 +77,10 @@ type DeleteOptions struct {
 // different semantics of the two struct, i.e., on ListJobOptions
 // all options can be combined, while here JobIDs is exclusive.
 func (o *DeleteOptions) toListOptions() ListJobsOptions {
-	if o.JobIDs != nil {
-		return ListJobsOptions{
-			JobIDs: o.JobIDs,
-		}
-	}
-	// otherwise fill in all the other options except
-	// JobIDs.
 	return ListJobsOptions{
 		Paused:        o.Paused,
 		GroupIDs:      o.GroupIDs,
 		SuperGroupIDs: o.SuperGroupIDs,
-		JobIDs:        nil,
+		JobIDs:        o.JobIDs,
 	}
 }
