@@ -194,14 +194,14 @@ func (r *RepositoryGorm) ListJobs(options ToListOptions) ([]RawJob, error) {
 				query = query.Where("paused = ?", false)
 			}
 		}
-		if convertedOptions.JobIDs != nil {
+		if convertedOptions.JobIDs != nil && len(convertedOptions.JobIDs) > 0 {
 			query = query.Where("id in (?)", convertedOptions.JobIDs)
 		}
-		if convertedOptions.SuperGroupIDs != nil {
-			query = query.Where("super_group_id in (?)", convertedOptions.SuperGroupIDs)
-		}
-		if convertedOptions.GroupIDs != nil {
+		if convertedOptions.GroupIDs != nil && len(convertedOptions.GroupIDs) > 0 {
 			query = query.Where("group_id in (?)", convertedOptions.GroupIDs)
+		}
+		if convertedOptions.SuperGroupIDs != nil && len(convertedOptions.SuperGroupIDs) > 0 {
+			query = query.Where("super_group_id in (?)", convertedOptions.SuperGroupIDs)
 		}
 	}
 	err := query.Find(&jobs).Error

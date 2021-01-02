@@ -1,11 +1,5 @@
 package smallben
 
-import (
-	"errors"
-)
-
-var ErrPauseResumeOptionsBad = errors.New("wrong combination of the fields of PauseResumeOptions")
-
 // fill retrieves all the RawJob to execute from the database
 // and then schedules them for execution. In case of errors
 // it is guaranteed that *all* the jobs retrieved from the
@@ -44,12 +38,11 @@ type ToListOptions interface {
 
 // PauseResumeOptions governs the behavior
 // of the PauseJobs and ResumeJobs methods.
+// The eventual fields are combined when querying the
+// database.
 type PauseResumeOptions struct {
 	// JobIDs specifies which jobs will be
-	// paused or resumed. This option is ignored
-	// if it is nil. If it is option is
-	// set, but also other options are set, an error
-	// of type ErrPauseResumeOptionsBad is returned.
+	// paused or resumed.
 	JobIDs []int64
 	// GroupIDs specifies the group ids
 	// whose jobs will be paused or resumed.
@@ -59,33 +52,15 @@ type PauseResumeOptions struct {
 	SuperGroupIDs []int64
 }
 
-// Valid checks if o is valid.
-func (o *PauseResumeOptions) Valid() bool {
-	if o.JobIDs != nil && (o.GroupIDs != nil || o.SuperGroupIDs != nil) {
-		return false
-	}
-	if o.JobIDs == nil && o.GroupIDs == nil && o.SuperGroupIDs == nil {
-		return false
-	}
-	return true
-}
-
-// ToListOptions convert to ListJobOptions by preserving the
-// different semantics of the two struct, i.e., on ListJobOptions
-// all options can be combined, while here JobIDs is exclusive.
+// ToListOptions convert to ListJobOptions. Just as in ListJobOptions,
+// all fields are combined.
 func (o *PauseResumeOptions) toListOptions() ListJobsOptions {
-	// provide only JobIDs if not nil
-	if o.JobIDs != nil {
-		return ListJobsOptions{
-			JobIDs: o.JobIDs,
-		}
-	}
 	// otherwise, fill in all the other options.
 	return ListJobsOptions{
 		Paused:        nil,
 		GroupIDs:      o.GroupIDs,
 		SuperGroupIDs: o.SuperGroupIDs,
-		JobIDs:        nil,
+		JobIDs:        o.JobIDs,
 	}
 }
 

@@ -5,27 +5,6 @@ import (
 	"testing"
 )
 
-func TestPauseResumeOptionsValid(t *testing.T) {
-	optionsNotValid := []PauseResumeOptions{
-		{
-			JobIDs:   []int64{1000},
-			GroupIDs: []int64{1000},
-		},
-		{
-			JobIDs:        []int64{1000},
-			SuperGroupIDs: []int64{1000},
-		},
-		{},
-	}
-
-	for _, option := range optionsNotValid {
-		valid := option.Valid()
-		if valid {
-			t.Errorf("Option should not have been valid: %+v\n", option)
-		}
-	}
-}
-
 type testPauseResumeOptions struct {
 	option   PauseResumeOptions
 	expected ListJobsOptions

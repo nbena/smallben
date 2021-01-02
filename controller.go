@@ -142,13 +142,7 @@ func (s *SmallBen) AddJobs(jobs []Job) error {
 // DeleteJobs deletes permanently jobs according to options.
 // It returns an error of type repository.ErrorTypeIfMismatchCount() if the number
 // of deleted jobs does not match the expected one.
-// It returns an error of type ErrPauseResumeOptionsBad if the
-// passed in options are not in a correct format.
 func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
-	// check if the struct is valid
-	if !options.Valid() {
-		return ErrPauseResumeOptionsBad
-	}
 
 	s.logger.Info("Deleting jobs", "Progress", "InProgress")
 
@@ -196,15 +190,9 @@ func (s *SmallBen) DeleteJobs(options *DeleteOptions) error {
 }
 
 // PauseJobs pauses the jobs according to the filter defined in options.
-// It returns an error of type ErrPauseResumeOptionsBad if the options
-// are malformed.
 // If no jobs matching options are found, an error of type ErrorTypeIfMismatchCount
 // is returned.
 func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
-	// check if the struct is correct
-	if !options.Valid() {
-		return ErrPauseResumeOptionsBad
-	}
 
 	s.logger.Info("Pausing jobs", "Progress", "InProgress")
 
@@ -251,10 +239,6 @@ func (s *SmallBen) PauseJobs(options *PauseResumeOptions) error {
 // If no jobs matching options are found, an error of type ErrorTypeIfMismatchCount
 // is returned.
 func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
-	// check if the struct is correct
-	if !options.Valid() {
-		return ErrPauseResumeOptionsBad
-	}
 
 	s.logger.Info("Resume jobs", "Progress", "InProgress")
 
