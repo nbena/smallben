@@ -271,7 +271,8 @@ func (s *SmallBenTestSuite) TestPauseResume(t *testing.T) {
 	}
 }
 
-func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
+// TestChangeSchedule tests the method UpdateJobs.
+func (s *SmallBenTestSuite) TestUpdateJobs(t *testing.T) {
 
 	// first and foremost, let's start the
 	// SmallBen
@@ -300,21 +301,35 @@ func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
 		schedulesBefore[i] = job.Schedule
 	}
 
-	// now change the schedule
-	schedule := UpdateOption{
+	// now change the CronExpression of the first
+	updateOptionCronExpression := UpdateOption{
 		JobID:          s.jobs[0].ID,
 		CronExpression: stringPointer("@every 120s"),
 	}
+	// the job input of the second
+	newJobInput := map[string]interface{}{
+		"fade": "toBlack",
+	}
+	updateOptionJoInput := UpdateOption{
+		JobID:          s.jobs[1].ID,
+		JobOtherInputs: &newJobInput,
+	}
+	// job input and CronExpression of the third
+	updateOptionAll := UpdateOption{
+		JobID:          s.jobs[2].ID,
+		CronExpression: stringPointer("@every 120s"),
+		JobOtherInputs: &newJobInput,
+	}
 
-	err = s.smallBen.UpdateJobs([]UpdateOption{schedule})
+	err = s.smallBen.UpdateJobs([]UpdateOption{updateOptionCronExpression, updateOptionJoInput, updateOptionAll})
 	if err != nil {
-		t.Errorf("Fail to change schedule: %s\n", err.Error())
+		t.Errorf("Fail to change updateOptionCronExpression: %s\n", err.Error())
 	}
 
 	// now check that the schedules have changed
 	lenOfJobsAfter := len(s.smallBen.scheduler.cron.Entries())
 	if lenOfJobsBefore != lenOfJobsAfter {
-		t.Errorf("Something went wrong when changing the schedule. Got: %d Expected %d\n",
+		t.Errorf("Something went wrong when changing the updateOptionCronExpression. Got: %d Expected %d\n",
 			lenOfJobsAfter, lenOfJobsBefore)
 	}
 
@@ -328,9 +343,23 @@ func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
 
 	// they should have changed
 	if reflect.DeepEqual(cronIDSAfter, cronIDSBefore) {
-		t.Errorf("Something went wrong when changing the schedule. Got: %v\n", cronIDSAfter)
+		t.Errorf("Something went wrong when changing the updateOptionCronExpression. Got: %v\n", cronIDSAfter)
 	}
 	if reflect.DeepEqual(schedulesBefore, schedulesAfter) {
+		t.Errorf("Something went wrong when changing the updateOptionCronExpression. ScheduleBefore: %v, ScheduleAfter: %v\n", schedulesBefore, schedulesAfter)
+	}
+
+	jobWithNewInput, err := s.smallBen.repository.GetJobsByIds([]int64{s.jobs[1].ID, s.jobs[2].ID})
+	if err != nil {
+		t.Errorf("Fail to get job by id: %s\n", err.Error())
+	}
+	if !reflect.DeepEqual(jobWithNewInput[0].runInput.OtherInputs, newJobInput) {
+		t.Errorf("JobInput not changed. Got:\n%v\nExpected:\n%v\n", jobWithNewInput[0].runInput.OtherInputs,
+			newJobInput)
+	}
+	if !reflect.DeepEqual(jobWithNewInput[1].runInput.OtherInputs, newJobInput) {
+		t.Errorf("JobInput not changed. Got:\n%v\nExpected:\n%v\n", jobWithNewInput[1].runInput.OtherInputs,
+			newJobInput)
 	}
 }
 
@@ -517,12 +546,12 @@ func TestSmallBenPauseResume(t *testing.T) {
 	}
 }
 
-func TestSmallBenChangeSchedule(t *testing.T) {
+func TestSmallBenUpdate(t *testing.T) {
 	tests := buildSmallBenTestSuite(t)
 
 	for _, test := range tests {
 		test.setup(t)
-		test.TestChangeSchedule(t)
+		test.TestUpdateJobs(t)
 		test.teardown(true, t)
 	}
 }

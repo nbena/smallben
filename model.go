@@ -342,8 +342,10 @@ func (u *UpdateOption) Valid() error {
 	if u.CronExpression == nil && u.JobOtherInputs == nil {
 		return ErrUpdateOptionInvalid
 	}
-	if _, err := u.schedule(); err != nil {
-		return err
+	if u.CronExpression != nil {
+		if _, err := u.schedule(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
