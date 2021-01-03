@@ -11,6 +11,7 @@ type Repository interface {
 	GetJob(jobID int64) (JobWithSchedule, error)
 	// PauseJobs pause `jobs`, i.e., marks them as paused.
 	// This operation must be atomic.
+	//
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of updated jobs is different than the number
 	// of required jobs, i.e., `len(jobs)`.
@@ -19,6 +20,7 @@ type Repository interface {
 	PauseJobs(jobs []RawJob) error
 	// ResumeJobs resumes `jobs`, i.e., marks them as non-paused.
 	// This operation must be atomic.
+	//
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of updated jobs is different than the number
 	// of required jobs, i.e., `len(jobs)`.
@@ -30,28 +32,34 @@ type Repository interface {
 	// is set to `false`.
 	GetAllJobsToExecute() ([]JobWithSchedule, error)
 	// GetJobsByIds returns an array of jobs whose id is in `jobsID`.
+	//
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of returned jobs is different than the number
 	// of required jobs, i.e., `len(jobsID)`.
 	GetJobsByIds(jobsID []int64) ([]JobWithSchedule, error)
 	// DeleteJobsByIds deletes all the jobs whose id is in `jobsID`.
+	//
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of deleted jobs is different than the number
 	// of required jobs, i.e., `len(jobsID)`.
 	DeleteJobsByIds(jobsID []int64) error
 	// SetCronId updates the `cron_id` field of `jobs`.
+	//
 	// It must return an error of type ErrorTypeIfMismatchCount() in case
 	// the number of updated jobs is different than the number
 	// of required jobs, i.e., `len(jobs)`.
 	SetCronId(jobs []JobWithSchedule) error
-	// SetCronIdAndChangeSchedule updates the `cron_id` and `cron_expression`
-	// fields of `jobs`.
+	// SetCronIdAndChangeSchedule updates the `cron_id`, `cron_expression`
+	// and `job_input` fields of RawJob.
+	//
 	// It must return an error of type ErrorType() in case
 	// the number of updated jobs is different than the number
 	// of required jobs, i.e., `len(jobs)`.
-	SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error
+	SetCronIdAndChangeScheduleAndJobInput(jobs []JobWithSchedule) error
 	// ListJobs list all the jobs present in the job storage backend,
-	// according to `options`. If options is `nil`, no filtering is applied.
+	// according to `options`.
+	//
+	// If options is `nil`, no filtering is applied.
 	ListJobs(options ToListOptions) ([]RawJob, error)
 	// ErrorTypeIfMismatchCount specifies the error type
 	// to return in case there is a mismatch count

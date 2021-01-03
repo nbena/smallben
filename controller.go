@@ -353,7 +353,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateOption) error {
 
 	// and update the database
 	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
-	if err = s.repository.SetCronIdAndChangeSchedule(jobsWithScheduleNew); err != nil {
+	if err = s.repository.SetCronIdAndChangeScheduleAndJobInput(jobsWithScheduleNew); err != nil {
 		s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 
 		// in case of errors, remove from the scheduler

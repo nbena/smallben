@@ -164,10 +164,20 @@ func (r *RepositoryGorm) SetCronId(jobs []JobWithSchedule) error {
 }
 
 // SetCronIdAndChangeSchedule updates the fields `cron_id` and `cron_expression` of `jobs`.
-func (r *RepositoryGorm) SetCronIdAndChangeSchedule(jobs []JobWithSchedule) error {
+func (r *RepositoryGorm) SetCronIdAndChangeScheduleAndJobInput(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {
-			result := tx.Model(&job.rawJob).Updates(map[string]interface{}{"cron_id": job.rawJob.CronID, "cron_expression": job.rawJob.CronExpression})
+			// build the input of the job.
+			if err := job.encodeJobInput(); err != nil {
+				// if it fails, the transaction is aborted.
+				return err
+			}
+			// now, do the update.
+			result := tx.Model(&job.rawJob).Updates(map[string]interface{}{
+				"cron_id":              job.rawJob.CronID,
+				"cron_expression":      job.rawJob.CronExpression,
+				"serialized_job_input": job.rawJob.SerializedJobInput,
+			})
 			if result.Error != nil {
 				return result.Error
 			}

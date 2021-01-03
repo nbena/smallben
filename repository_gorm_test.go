@@ -251,7 +251,7 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 		r.jobsToAdd[i].rawJob.CronExpression = newSchedule
 	}
 
-	err = r.repository.SetCronIdAndChangeSchedule(r.jobsToAdd)
+	err = r.repository.SetCronIdAndChangeScheduleAndJobInput(r.jobsToAdd)
 	if err != nil {
 		t.Errorf("Fail to set cron id and change schedule: %s", err.Error())
 	}
@@ -539,8 +539,8 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronId", t)
 
 	// set cron id and change schedule
-	err = r.repository.SetCronIdAndChangeSchedule([]JobWithSchedule{{rawJob: notExisting}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronIdAndChangeSchedule", t)
+	err = r.repository.SetCronIdAndChangeScheduleAndJobInput([]JobWithSchedule{{rawJob: notExisting}})
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronIdAndChangeScheduleAndJobInput", t)
 
 }
 
