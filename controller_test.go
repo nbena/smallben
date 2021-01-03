@@ -306,7 +306,7 @@ func (s *SmallBenTestSuite) TestChangeSchedule(t *testing.T) {
 		CronExpression: stringPointer("@every 120s"),
 	}
 
-	err = s.smallBen.UpdateSchedule([]UpdateOption{schedule})
+	err = s.smallBen.UpdateJobs([]UpdateOption{schedule})
 	if err != nil {
 		t.Errorf("Fail to change schedule: %s\n", err.Error())
 	}
@@ -417,14 +417,14 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// same for update
-	err = s.smallBen.UpdateSchedule([]UpdateOption{
+	err = s.smallBen.UpdateJobs([]UpdateOption{
 		{JobID: 10000,
 			CronExpression: stringPointer("@every 1s"),
 		}})
 	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
 
 	// new, let's require a non-valid schedule
-	err = s.smallBen.UpdateSchedule([]UpdateOption{
+	err = s.smallBen.UpdateJobs([]UpdateOption{
 		{JobID: s.jobs[0].ID,
 			CronExpression: stringPointer("not valid expression"),
 		}})

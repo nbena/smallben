@@ -300,7 +300,7 @@ func getIdsFromJobList(jobs []Job) []int64 {
 //
 // An update on a Job consists in changing
 // the schedule, by using the field `CronExpression`,
-// or the Job input, by using the field `JobInput`.
+// or the Job input, by using the field `JobOtherInputs`.
 //
 // If none of those fields are specified, i.e., they are
 // both nil, the struct is considered invalid.
@@ -311,10 +311,10 @@ type UpdateOption struct {
 	// If nil, it is ignored, i.e., the schedule
 	// is not changed.
 	CronExpression *string
-	// JobInput is the new JobInput of the Job.
+	// JobOtherInputs is the new OtherInputs of the Job.
 	// If nil, it is ignored, i.e.,
 	// the Job input is not changed.
-	JobInput *map[string]interface{}
+	JobOtherInputs *map[string]interface{}
 }
 
 func (u *UpdateOption) schedule() (cron.Schedule, error) {
@@ -336,10 +336,10 @@ var (
 // are returned.
 //
 // UpdateOption is considered valid if
-// at least one field between CronExpression and JobInput
+// at least one field between CronExpression and JobOtherInputs
 // are not nil, and the cron string can be parsed.
 func (u *UpdateOption) Valid() error {
-	if u.CronExpression == nil && u.JobInput == nil {
+	if u.CronExpression == nil && u.JobOtherInputs == nil {
 		return ErrUpdateOptionInvalid
 	}
 	if _, err := u.schedule(); err != nil {

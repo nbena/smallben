@@ -3,6 +3,7 @@ package smallben
 import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/robfig/cron/v3"
 	"sync"
 )
 
@@ -300,37 +301,58 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	return nil
 }
 
-// UpdateOption updates the scheduler internal state by changing the `scheduleInfo`
-// of the required tests.
-// In case of errors, it is guaranteed that, in the worst case, tests will be removed
-// from the scheduler will still being in the database with the old schedule.
-func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateOption) error {
+// UpdateOption updates the scheduler internal state according to `scheduleInfo`.
+// In particular, two things can be updated:
+//
+// * the schedule of the Job
+//
+// * the JobOtherInputs of the Job.
+//
+// In case of errors, it is guaranteed that, in the worst case, jobs will be removed
+// from the scheduler will still being in the database with the old schedule and old JobOtherInputs.
+func (s *SmallBen) UpdateJobs(scheduleInfo []UpdateOption) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.logger.Info("Updating schedule", "Progress", "InProgress", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+	s.logger.Info("Updating jobs", "Progress", "InProgress", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 	// first, we grab all the jobs
 	jobsWithScheduleOld, err := s.repository.GetJobsByIds(getIdsFromUpdateScheduleList(scheduleInfo))
 	if err != nil {
-		s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+		s.logger.Error(err, "Updating jobs", "Progress", "Error", "Details", "RetrievingFromRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 		return err
 	}
 
 	jobsWithScheduleNew := make([]JobWithSchedule, len(scheduleInfo))
 
 	// compute the new schedule
-	// for the required jobs
+	// for the required jobs, making sure the struct is valid.
 	for i, job := range jobsWithScheduleOld {
+		// if it is not valid, just return
+		if err := scheduleInfo[i].Valid(); err != nil {
+			s.logger.Error(err, "Updating jobs", "Progress", "Error", "Details", "Invalid UpdateOption", "ID", scheduleInfo[i].JobOtherInputs)
+			return err
+		}
+
+		var newSchedule cron.Schedule
 		// job is a copy of the original job
 		// so it is safe to modify it.
 		newJobRaw := job.rawJob
-		newJobRaw.CronExpression = *scheduleInfo[i].CronExpression
-		// build the cron.Schedule object from
-		newSchedule, err := scheduleInfo[i].schedule()
-		if err != nil {
-			s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "BuildingJobWithSchedule", "ID", scheduleInfo[i].JobID)
-			return err
+		// if a new schedule has been specified
+		// we need to parse it
+		if scheduleInfo[i].CronExpression != nil {
+			var err error
+			newJobRaw.CronExpression = *scheduleInfo[i].CronExpression
+			// build the cron.Schedule object from
+			newSchedule, err = scheduleInfo[i].schedule()
+			if err != nil {
+				s.logger.Error(err, "Updating jobs", "Progress", "Error", "Details", "BuildingJobWithSchedule", "ID", scheduleInfo[i].JobID)
+				return err
+			}
+		} else {
+			// otherwise, just keep the old one.
+			newSchedule = job.schedule
 		}
+
 		// and now, the JobWithSchedule
 		// with the new inner rawJob.
 		newJob := JobWithSchedule{
@@ -339,25 +361,32 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateOption) error {
 			run:      job.run,
 			runInput: job.runInput,
 		}
+
+		// now, set the (new) JobOtherInputs
+		// otherwise, the old has been already set.
+		if scheduleInfo[i].JobOtherInputs != nil {
+			newJob.runInput.OtherInputs = *scheduleInfo[i].JobOtherInputs
+		}
+
 		// now store the new rawJob into the list
 		jobsWithScheduleNew[i] = newJob
 	}
 
 	// now, remove the jobsToAdd from the scheduler
-	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+	s.logger.Info("Updating jobs", "Progress", "InProgress", "Details", "DeletingFromScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 	s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 
 	// now, we re-add them to the scheduler
-	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "AddingToScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+	s.logger.Info("Updating jobs", "Progress", "InProgress", "Details", "AddingToScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 	s.scheduler.AddJobs(jobsWithScheduleNew)
 
 	// and update the database
-	s.logger.Info("Updating schedule", "Progress", "InProgress", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+	s.logger.Info("Updating jobs", "Progress", "InProgress", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 	if err = s.repository.SetCronIdAndChangeScheduleAndJobInput(jobsWithScheduleNew); err != nil {
-		s.logger.Error(err, "Updating schedule", "Progress", "Error", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+		s.logger.Error(err, "Updating jobs", "Progress", "Error", "Details", "UpdatingInRepository", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 
 		// in case of errors, remove from the scheduler
-		s.logger.Info("Updating schedule", "Progress", "Cleaning", "Details", "DeleteFromScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+		s.logger.Info("Updating jobs", "Progress", "Cleaning", "Details", "DeleteFromScheduler", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 		s.scheduler.DeleteJobsWithSchedule(jobsWithScheduleNew)
 
 		// and update the metrics.
@@ -369,7 +398,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateOption) error {
 	}
 	// if everything is fine, no need to
 	// update the metrics
-	s.logger.Info("Updating schedule", "Progress", "Done", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
+	s.logger.Info("Updating jobs", "Progress", "Done", "IDs", getIdsFromUpdateScheduleList(scheduleInfo))
 	return nil
 }
 
