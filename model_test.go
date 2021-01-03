@@ -247,7 +247,7 @@ func TestJobFromRawWithError(t *testing.T) {
 		SerializedJobInput: "",
 	}
 	_, err := raw.ToJobWithSchedule()
-	checkErrorIsOf(err, io.EOF, "DecodeWithNilBuffer", t)
+	checkErrorIsOf(err, io.EOF, t)
 
 	// now, set the first one to a valid job
 	jobSerialized, _ := fakeSerialized(t, map[string]interface{}{})
@@ -359,4 +359,11 @@ func fakeSerialized(t *testing.T, input map[string]interface{}) (string, string)
 	jobInputEncoded := inputEncode(input, t)
 
 	return base64.StdEncoding.EncodeToString(bufferJob.Bytes()), jobInputEncoded
+}
+
+func TestJobUpdateValid(t *testing.T) {
+	invalid := UpdateOption{}
+	checkErrorIsOf(invalid.Valid(), ErrUpdateOptionInvalid, t)
+	invalid.CronExpression = stringPointer("@@")
+	checkErrorMsg(invalid.Valid(), "unrecognized descriptor: @@", t)
 }

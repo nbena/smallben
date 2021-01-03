@@ -493,9 +493,9 @@ Got: %d Expected: %d\n`, len(jobs), len(jobsBySuperGroup)-1)
 
 // checkErrorIsOf checks that `err` is of type `expected`. If `err`
 // is nil, fails showing `msg`.
-func checkErrorIsOf(err, expected error, msg string, t *testing.T) {
+func checkErrorIsOf(err, expected error, t *testing.T) {
 	if err == nil {
-		t.Errorf("%s error expected. Should have been not nil.\n", msg)
+		t.Errorf("%s error expected. Should have been not nil.\n", expected.Error())
 		t.FailNow()
 	} else if !errors.Is(err, expected) {
 		t.Errorf("Error is of wrong type: %s\n", err.Error())
@@ -524,31 +524,31 @@ func (r *RepositoryTestSuite) TestPauseJobNotExisting(t *testing.T) {
 
 	// get with just one
 	_, err := r.repository.GetJob(1000)
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJob", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// get with many
 	_, err = r.repository.GetJobsByIds([]int64{10000})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetJobs", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// get with many -- raw
 	_, err = r.repository.ListJobs(&ListJobsOptions{JobIDs: []int64{10000}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "GetRawJobs", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// pause
 	err = r.repository.PauseJobs([]RawJob{notExisting})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Pause", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// resume
 	err = r.repository.ResumeJobs([]JobWithSchedule{{rawJob: notExisting}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "Resume", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// set cron id
 	err = r.repository.SetCronId([]JobWithSchedule{{rawJob: notExisting}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronId", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// set cron id and change schedule
 	err = r.repository.SetCronIdAndChangeScheduleAndJobInput([]JobWithSchedule{{rawJob: notExisting}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "SetCronIdAndChangeScheduleAndJobInput", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 }
 

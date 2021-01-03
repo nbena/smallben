@@ -439,18 +439,18 @@ func (s *SmallBenTestSuite) TestErrors(t *testing.T) {
 	err = s.smallBen.DeleteJobs(&DeleteOptions{PauseResumeOptions: PauseResumeOptions{
 		JobIDs: []int64{10000},
 	}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// same for pause
 	err = s.smallBen.PauseJobs(&PauseResumeOptions{JobIDs: []int64{10000}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// same for update
 	err = s.smallBen.UpdateJobs([]UpdateOption{
 		{JobID: 10000,
 			CronExpression: stringPointer("@every 1s"),
 		}})
-	checkErrorIsOf(err, gorm.ErrRecordNotFound, "gorm.ErrRecordNotFound", t)
+	checkErrorIsOf(err, gorm.ErrRecordNotFound, t)
 
 	// new, let's require a non-valid schedule
 	err = s.smallBen.UpdateJobs([]UpdateOption{
