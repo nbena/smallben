@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"github.com/robfig/cron/v3"
 	"time"
 )
@@ -251,12 +252,20 @@ func (j *JobWithSchedule) BuildJob() (RawJob, error) {
 	j.rawJob.SerializedJob = base64.StdEncoding.EncodeToString(bufferJob.Bytes())
 
 	// now, encode the job input
-	encodedInput, err := json.Marshal(j.runInput.OtherInputs)
-	if err != nil {
+	if err := j.encodeJobInput(); err != nil {
 		return RawJob{}, err
 	}
-	j.rawJob.SerializedJobInput = string(encodedInput)
 	return j.rawJob, nil
+}
+
+// encodeJobInput encodes j.rawJob.SerializedJobInput.
+func (j *JobWithSchedule) encodeJobInput() error {
+	encodedInput, err := json.Marshal(j.runInput.OtherInputs)
+	if err != nil {
+		return err
+	}
+	j.rawJob.SerializedJobInput = string(encodedInput)
+	return nil
 }
 
 // getIdsFromJobRawList basically does jobs.map(rawJob -> rawJob.id)
@@ -286,21 +295,61 @@ func getIdsFromJobList(jobs []Job) []int64 {
 	return ids
 }
 
-// UpdateSchedule is the struct used to update
-// the schedule of a test.
-type UpdateSchedule struct {
-	// JobID is the ID of the tests
+// UpdateOption is the struct used to update
+// a Job.
+//
+// An update on a Job consists in changing
+// the schedule, by using the field `CronExpression`,
+// or the Job input, by using the field `JobInput`.
+//
+// If none of those fields are specified, i.e., they are
+// both nil, the struct is considered invalid.
+type UpdateOption struct {
+	// JobID is the ID of the Job to update.
 	JobID int64
-	// CronExpression is the new schedule
-	CronExpression string
+	// CronExpression is the new schedule of the Job.
+	// If nil, it is ignored, i.e., the schedule
+	// is not changed.
+	CronExpression *string
+	// JobInput is the new JobInput of the Job.
+	// If nil, it is ignored, i.e.,
+	// the Job input is not changed.
+	JobInput *map[string]interface{}
 }
 
-func (u *UpdateSchedule) schedule() (cron.Schedule, error) {
-	return cron.ParseStandard(u.CronExpression)
+func (u *UpdateOption) schedule() (cron.Schedule, error) {
+	return cron.ParseStandard(*u.CronExpression)
+}
+
+var (
+	// ErrUpdateOptionInvalid is returned when the fields
+	// of UpdateOption are invalid.
+	// This error is returned when the combination
+	// of the fields is not valid (i.e., both nil).
+	// For error in the CronExpression field,
+	// the specific error set by the library is returned,
+	ErrUpdateOptionInvalid = errors.New("invalid option")
+)
+
+// Valid returns whether the fields in this struct
+// are valid. If the struct is valid, no errors
+// are returned.
+//
+// UpdateOption is considered valid if
+// at least one field between CronExpression and JobInput
+// are not nil, and the cron string can be parsed.
+func (u *UpdateOption) Valid() error {
+	if u.CronExpression == nil && u.JobInput == nil {
+		return ErrUpdateOptionInvalid
+	}
+	if _, err := u.schedule(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getIdsFromUpdateScheduleList basically does schedules.map(rawJob -> rawJob.id)
-func getIdsFromUpdateScheduleList(schedules []UpdateSchedule) []int64 {
+func getIdsFromUpdateScheduleList(schedules []UpdateOption) []int64 {
 	ids := make([]int64, len(schedules))
 	for i, test := range schedules {
 		ids[i] = test.JobID

@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+// stringPointer returns a pointer to the passed in value.
+func stringPointer(value string) *string {
+	return &value
+}
+
 type testPauseResumeOptions struct {
 	option   PauseResumeOptions
 	expected ListJobsOptions

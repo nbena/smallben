@@ -300,11 +300,11 @@ func (s *SmallBen) ResumeJobs(options *PauseResumeOptions) error {
 	return nil
 }
 
-// UpdateSchedule updates the scheduler internal state by changing the `scheduleInfo`
+// UpdateOption updates the scheduler internal state by changing the `scheduleInfo`
 // of the required tests.
 // In case of errors, it is guaranteed that, in the worst case, tests will be removed
 // from the scheduler will still being in the database with the old schedule.
-func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
+func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateOption) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -324,7 +324,7 @@ func (s *SmallBen) UpdateSchedule(scheduleInfo []UpdateSchedule) error {
 		// job is a copy of the original job
 		// so it is safe to modify it.
 		newJobRaw := job.rawJob
-		newJobRaw.CronExpression = scheduleInfo[i].CronExpression
+		newJobRaw.CronExpression = *scheduleInfo[i].CronExpression
 		// build the cron.Schedule object from
 		newSchedule, err := scheduleInfo[i].schedule()
 		if err != nil {

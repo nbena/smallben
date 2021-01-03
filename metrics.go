@@ -83,8 +83,11 @@ func (m *metrics) resumeJobs(size int) {
 }
 
 // postDelete updates metrics after a delete operation.
-// - beforeJobs is the list of jobs that were on the scheduler before removing them
-// - requestedJobs is the list of jobs users requested to delete
+//
+// * beforeJobs is the list of jobs that were on the scheduler before removing them
+//
+// * requestedJobs is the list of jobs users requested to delete
+//
 func (m *metrics) postDelete(beforeJobs []cron.Entry, requestedJobs []RawJob) {
 	// actually, we don't know if the deleted jobs
 	// were running or not, so we to find out
