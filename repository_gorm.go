@@ -163,7 +163,11 @@ func (r *RepositoryGorm) SetCronId(jobs []JobWithSchedule) error {
 	return err
 }
 
-// SetCronIdAndChangeSchedule updates the fields `cron_id` and `cron_expression` of `jobs`.
+// SetCronIdAndChangeScheduleAndJobInput updates the fields `cron_id`, `cron_expression`
+// and `serialized_job_input` of jobs.
+//
+// In particular, the job input must have been set internally, since
+// this call will encode the job input.
 func (r *RepositoryGorm) SetCronIdAndChangeScheduleAndJobInput(jobs []JobWithSchedule) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		for _, job := range jobs {

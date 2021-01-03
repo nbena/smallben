@@ -244,11 +244,16 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 
 	newCronID := int64(100)
 	newSchedule := "@every 100s"
+	newJobInput := map[string]interface{}{
+		"never free": "never me",
+	}
 
 	// now we do the same, but we also change the schedule
+	// and the input
 	for i := range r.jobsToAdd {
 		r.jobsToAdd[i].rawJob.CronID = newCronID
 		r.jobsToAdd[i].rawJob.CronExpression = newSchedule
+		r.jobsToAdd[i].runInput.OtherInputs = newJobInput
 	}
 
 	err = r.repository.SetCronIdAndChangeScheduleAndJobInput(r.jobsToAdd)
@@ -264,6 +269,9 @@ func (r *RepositoryTestSuite) TestCronId(t *testing.T) {
 		}
 		if job.rawJob.CronExpression != newSchedule {
 			t.Errorf("Schedule not changed. Got: %s Expected: %s\n", job.rawJob.CronExpression, newSchedule)
+		}
+		if !reflect.DeepEqual(job.runInput.OtherInputs, newJobInput) {
+			t.Errorf("OtherInputs not changed. Got:\n%v\nExpected:\n%v\n", job.runInput.OtherInputs, newJobInput)
 		}
 	}
 }
