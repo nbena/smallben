@@ -41,16 +41,16 @@ The `Run` method takes input a `struct` of type `CronJobInput`, which is defined
 ```go
 // CronJobInput is the input passed to the Run function.
 type CronJobInput struct {
-// JobID is the ID of the current job.
-JobID        int64
-// GroupID is the GroupID of the current job.
-GroupID      int64
-// SuperGroupID is the SuperGroupID of the current job.
-SuperGroupID int64
-// CronExpression is the interval of execution, as specified on job creation.
-CronExpression string
-// OtherInputs contains the other inputs of the job.
-OtherInputs  map[string]interface{}
+    // JobID is the ID of the current job.
+    JobID        int64
+    // GroupID is the GroupID of the current job.
+    GroupID      int64
+    // SuperGroupID is the SuperGroupID of the current job.
+    SuperGroupID int64
+    // CronExpression is the interval of execution, as specified on job creation.
+    CronExpression string
+    // OtherInputs contains the other inputs of the job.
+    OtherInputs  map[string]interface{}
 }
 ```
 
@@ -125,13 +125,13 @@ and `SuperGroupID`, the following fields must be specified.
 ```go
 // Create a Job struct. No builder-style API.
 job := smallben.Job{
-ID: 1,
-GroupID: 1,
-SuperGroupID: 1,
-// executed every 5 seconds
-CronExpression: "@every 5s",
-Job: &FooJob{},
-JobInput: make(map[string]interface{}),
+    ID: 1,
+    GroupID: 1,
+    SuperGroupID: 1,
+    // executed every 5 seconds
+    CronExpression: "@every 5s",
+    Job: &FooJob{},
+    JobInput: make(map[string]interface{}),
 }
 ```
 
@@ -155,10 +155,10 @@ zapLogger, _ := zap.NewProduction()
 logger := zapr.NewLogger(zapLogger)
 
 config := Config{
-// use default options for the scheduler
-SchedulerConfig: &smallben.SchedulerConfig{},
-Logger: logger,
-}
+    // use default options for the scheduler
+    SchedulerConfig: &smallben.SchedulerConfig{},
+        Logger: logger,
+    }
 
 // create the repository...
 
